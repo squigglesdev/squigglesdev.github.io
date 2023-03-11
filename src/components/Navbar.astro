@@ -1,0 +1,72 @@
+<nav class="navbar">
+    <img class="pfp" src="/pfp.png"/>
+    <div class="buttons">
+        <button><span class="buttontext">Home</span></button>
+        <button><span class="buttontext">About</span></button>
+        <button><span class="buttontext">Links</span></button>
+    </div>
+</nav>
+<style>
+    .navbar {
+        position: fixed;
+        top: 24px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        align-items: flex-start;
+        padding: 6px;
+        gap: 25vw;
+        width: auto;
+        height: auto;
+        background: rgba(16, 21, 27, 0.7);
+        border: 1.6px solid #161D27;
+        border-radius: 10px;
+        backdrop-filter: blur(10px);
+        z-index: 100;
+    }
+
+    .pfp {
+        width: 38px;
+        height: 38px;
+        border: 1.6px solid #161D27;
+        border-radius: 8px;
+    }
+
+    .buttons {
+        display: flex;
+        gap: 10px;
+    }
+
+    button {
+        width: 69px;
+        height: 38px;
+        background: transparent;
+        border: 1.6px solid #161D27;
+        border-radius: 8px;
+        box-sizing: border-box;
+    }
+    .buttontext{
+        font-family: 'Fibra';
+        font-style: normal;
+        font-weight: 300;
+        font-size: 14px;
+        line-height: 18px;
+        color: white;
+    }
+    button:hover, button:focus{
+        background: #161D27;
+    }
+    @media screen and (max-width: 636px) {
+        .navbar {
+            position: fixed;
+            top: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding: 6px;
+            width: 90%;
+        }
+    }
+</style>
