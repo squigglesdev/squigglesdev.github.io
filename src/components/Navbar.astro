@@ -1,9 +1,10 @@
 <nav class="navbar">
     <img class="pfp" src="/pfp.png"/>
     <div class="buttons">
-        <button><span class="buttontext">Home</span></button>
-        <button><span class="buttontext">Blog</span></button>
-        <button><span class="buttontext">Links</span></button>
+        <button onclick="location.href='/'"><span class="buttontext">Home</span></button>
+        <button onclick="location.href='/blog/'"><span class="buttontext">Blog</span></button>
+        <button onclick="location.href='/links/'"><span class="buttontext">Links</span></button>
+    <button class="hamburger" onclick="alert("Hacked lol")"><img src="/menu.svg" /></button>
     </div>
 </nav>
 <style>
@@ -47,6 +48,10 @@
         box-sizing: border-box;
 	  cursor: pointer;
     }
+    .hamburger {
+        width: 38px;
+        display: none;
+    }
     .buttontext{
 	  font-family: 'Cera Pro', 'Century Gothic', sans-serif;
         font-style: normal;
@@ -55,7 +60,7 @@
         line-height: 18px;
         color: white;
     }
-    button:hover, button:focus{
+    button:hover{
         background: #161D27;
     }
     @media screen and (max-width: 636px) {
@@ -70,6 +75,12 @@
             padding: 6px;
             gap: auto;
             width: 90%;
+        }
+        button {
+            display: none;
+        }
+        .hamburger {
+            display: block;
         }
     }
 </style>
