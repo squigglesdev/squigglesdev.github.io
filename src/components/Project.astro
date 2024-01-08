@@ -22,7 +22,7 @@ const {title, actions} = Astro.props;
           <a
             class={`link ${index === 0 ? '' : 'secondary'}`}
             href={href}
-            target="_blank"
+            
           >
             {text}
           </a>
@@ -61,6 +61,7 @@ const {title, actions} = Astro.props;
     overflow: hidden;
     position: relative;
     border-radius: 5px;
+    max-width: 55%;
     cursor: pointer;
     object-fit: cover;
   }
@@ -75,6 +76,7 @@ const {title, actions} = Astro.props;
     flex-direction: column;
     gap: 6px;
   }
+  
 
   .title {
     font-size: 32px;
@@ -98,8 +100,14 @@ const {title, actions} = Astro.props;
     .card {
       flex-wrap: wrap;
       max-width: 492px;
-      margin-left: auto;
-      margin-right: auto;
+      margin-left: 0;
+      margin-right: 0;
+    }
+    .preview {
+      max-width: 100%;
+      flex-basis: 100%;
+      aspect-ratio: 16 / 9;
+      margin-bottom: 12px;
     }
     h3 {
         font-size: 40px;

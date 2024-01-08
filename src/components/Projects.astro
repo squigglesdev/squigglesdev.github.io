@@ -1,26 +1,36 @@
 ---
 import Project from '../components/Project.astro';
+const posts = await Astro.glob('../pages/blog/*.mdx');
 ---
 <div class="hero">
     <h1>Blog</h1>
     <p>This is the space where I showcase the work I've done in a (hopefully) digestable way!</p>
-    <Project
-        title="Website creation with Astro"
-        actions={{'Read': 'about:blank'}}>
-      <img src="/blog/astroDev.png" alt="astro" slot="header"/>
-      My adventures creating this website with Astro. Definately a learning experience!
-    </Project>
+    <ul>
+    {posts.map((post) => (
+        <Project
+            title={post.frontmatter.title}
+            actions={post.frontmatter.actions}>
+          <img src={post.frontmatter.previewImage} alt={post.frontmatter.title} slot="header"/>
+          {post.frontmatter.description}
+        </Project>
+    ))}
+    </ul>
 </div>
 <style>
     .hero{
         position: absolute;
         display: flex;
         left: 50%;
-        top: 19%;
+        top: 10%;
         flex-direction: column;
         transform: translateX(-50%);
         gap: -5px;
         color: white;
+    }
+    ul {
+        margin: 0;
+        padding-left: 0;
+        list-style: none;
     }
     .p{
         position: relative;
@@ -32,6 +42,7 @@ import Project from '../components/Project.astro';
         .hero {
             width: 90%;
         }
+    }
     @media screen and (max-width: 636px) {
         h1 {
             font-size: 40px;

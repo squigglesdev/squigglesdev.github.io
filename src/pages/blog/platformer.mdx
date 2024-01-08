@@ -1,0 +1,275 @@
+---
+title: Platformer in p5.js
+pubDate: January 03, 2024
+description: My process making a simple platformer in p5.js!
+author: Squiggles
+actions: {'Read': 'platformer'}
+previewImage: /blog/platformer/astroDev.png
+---
+
+import Layout from '../../layouts/Layout.astro';
+import Navbar from '../../components/Navbar.astro';
+import '../../styles/blogPosts.css';
+
+<script src="/motion-canvas-player/main.js" type="text/javascript"/>
+
+<Layout title={frontmatter.title}>
+    <main>
+        <Navbar />
+        <img src={frontmatter.previewImage} alt="preview" id="preview"/>
+        # Creating a simple, object-oriented platformer game in p5.js
+        By {frontmatter.author}, on {frontmatter.pubDate} - {frontmatter.description}
+
+        ## The Idea
+        I'm going to create a simple platformer game in p5.js that involves jumping around and fighting enemies.
+        It won't win any awards, but it will be a fun project to work on and take you through my process of creating a game,
+        especially one that is object-oriented.
+
+        To start, let's lay out some success critera for the project.
+
+
+        ## Success Criteria
+        - A base entity class that the player and enemies will inherit from that has attributes like position, velocity, and health.
+        This will be useful as it will abstract away the details of how the entity is drawn and how it moves, allowing us to focus on the game logic,
+        such as when to attack.
+
+        - A world class that will contain the player and enemies, as well as the platforms and other objects in the world. It will have attributes
+        such as the gravity, time, and the background. It will also have methods for updating the world and drawing it. This will be useful as it will
+        allow us to easily add new entities to the world and have them interact with each other. It will also allow us to centralise the drawing and updating
+        process.
+
+        - The ability of enemies to pathfind to the player and attack them. This will be useful as it will allow us to create enemies that are more than just
+        obstacles, but are actually a threat to the player.
+
+        - A friendly user interface that allows the player to see their health and other stats. This will be useful as it will allow the player to see how they
+        are doing and how much health they have left.
+
+        ## Process
+        Without further ado, let's get started!
+
+        ### Creating the World
+        The first thing we need to do is create the world class. This will be the class that contains all the entities and objects in the world, and will be
+        responsible for updating and drawing them. My first iteration of this class covered the very basics, and looked like this:
+
+        <div class="codeBlock">
+        ```js
+        class World {
+            constructor(name, gravity, tickRate) {
+                this.name = name;
+                this.gravity = gravity;
+                this.tickRate = tickRate;
+                this.entities = [];
+            }
+            getName() {
+                return this.name;
+            }
+            getGravity() {
+                return this.gravity;
+            }
+            getTickRate() {
+                return this.tickRate;
+            }
+            getEntities() {
+                return this.entities;
+            }
+            setName(name) {
+                this.name = name;
+            }
+            setGravity(gravity) {
+                this.gravity = gravity;
+            }
+            setTickRate(tickRate) {
+                this.tickRate = tickRate;
+            }
+            toString() {
+                return this.name + " " + this.gravity + " " + this.tickRate;
+            }
+            addEntity(entity) {
+                this.entities.push(entity);
+            }
+            tick() {
+                for (let i = 0; i < this.entities.length; i++) {
+                    this.entities[i].tick();
+                }
+                sleep(1/this.tickRate);
+            }
+        }
+        ```
+        </div>
+        This code mostly consists of getters and setters for the attributes of the world, and that's about it. The only other thing of note is the `tick()` method,
+        which calls the `tick()` method of each entity in the world, and then waits for `1/tickRate` seconds. This is so that the game runs at a consistent speed, and
+        doesn't run faster on faster computers (foreshadowing).
+
+        Here you'll notics that I've left out the logic for handling gravity acting on the entities. This is because I wanted entities to handle their own gravity, so
+        collisions would be easier to handle.
+
+        ### Implementing gravity
+        As I mentioned before, I wanted entities to handle their own gravity. So, let's create an entity class that will handle the gravity and other general movement for us.
+        This class will be abstract, and will be inherited by the player and enemies. To preface, as I'm sure we all know:
+        $$
+        F = ma
+        $$
+        Where $F\ (N)$ is the force, $m\ (kg)$ is the mass, and $a\ (ms^{-2})$ is the acceleration due to gravity. Therefore, to calculate the weight force on the object, we can use that formula.
+        
+        So, I implemented the class like this:
+
+        <div class="codeBlock">
+        ```js
+        class Entity {
+            constructor (world, id, name, position, velocity, mass, maxHealth) {
+                this.world = world;
+                this.id = id;
+                this.name = name;
+                this.position = position;
+                this.velocity = velocity;
+                this.mass = mass;
+                this.maxHealth = maxHealth;
+                this.health = maxHealth;
+            }
+            getId() {
+                return this.id;
+            }
+            getName() {
+                return this.name;
+            }
+            getPosition() {
+                return this.position;
+            }
+            getMass() {
+                return this.mass;
+            }
+            getMaxHealth() {
+                return this.maxHealth;
+            }
+            getHealth() {
+                return this.health;
+            }
+            setId(id) {
+                this.id = id;
+            }
+            setName(name) {
+                this.name = name;
+            }
+            setPosition(position) {
+                this.position = position;
+            }
+            setMass(mass) {
+                this.mass = mass;
+            }
+            setMaxHealth(maxHealth) {
+                this.maxHealth = maxHealth;
+            }
+            setHealth(health) {
+                this.health = health;
+            }
+            toString() {
+                return this.id + " " + this.name + " " + this.position + " " + this.mass + " " + this.maxHealth 
+                    + " " + this.health;
+            }
+            handleGravity(gravity, t) {
+                let force = this.mass * gravity;
+                this.position.y += t * (this.velocity.y + t * force / 2);
+                this.velocity.y += force * t;
+            }
+            handleCollision(entities) {
+                if (this.position.y + 25 > height) {
+                    this.position.y = height - 25;
+                }
+            }
+            draw() {
+                circle(this.position.x, this.position.y, 50);
+            }
+            tick() {
+                this.handleCollision(this.world.getEntities());
+                this.handleGravity(this.world.getGravity(), 1/this.world.getTickRate());
+                this.handleCollision(this.world.getEntities());
+                this.draw();
+            }
+        }
+        ```
+        </div>
+        As you can see, this class is also very basic to start off with. Getters and setters again, and a `tick()` method that gets called by the world. What we're interested in
+        here is the `handleGravity()` method. I've used a physical force based approach for the gravity, hence `force = mass * gravity`, like I mentioned earlier.
+
+        I've also added a very basic `handleCollision()` method that just stops the entity from falling off the screen. This will be expanded on later.
+
+        ### First test
+        Now that we have the world and entity classes, let's test them out!
+
+        Let's set some testing criteria:
+        - The program should run.
+        - The world should be able to be created with a name, gravity, and tick rate.
+        - The world should be able to add entities.
+        - The world should be able to tick.
+        - The entity should be able to be created with a name, position, velocity, mass, and max health.
+        - The entity should fall due to gravity.
+        - The entity shouldn't fall off the screen.
+
+        #### Results
+        | Test | Result | Proof |
+        | ---- | ------ | ----- |
+        | The program should run. | Passed! | No errors appeared in the console. |
+        | The world should be able to be created with a name, gravity, and tick rate. | Passed! | Returned: `Test 9.8 20` |
+        | The world should be able to add entities. | Passed! | No errors appeared in the console. |
+        | The world should be able to tick. | Passed! | No errors appeared in the console. |
+        | The entity should be able to be created with a name, position, velocity, mass, and max health. | Passed! | Returned: `0 Test p5.Vector Object : [956, 0.1, 0] 10 100 100` |
+        | The entity should fall due to gravity. | Passed! | See video below! |
+        | The entity shouldn't fall off the screen. | Passed! | <video src="/blog/platformer/TEST01.webm" type="video/webm" controls muted/> |
+        
+        ### Creating the player
+        Now that we have the world and entity classes, let's create the player class. We want it to have the features of the entity class, whilst also being able to have its
+        own unique features. So to do this, we'll inherit from the entity class. Here we go:
+
+        <div class="codeBlock">
+        ```js
+        class PlayerEntity extends Entity {
+            constructor (world, id, name, position, velocity, mass, maxHealth, strafingForce, jumpingForce,
+                crouchingForce) {
+                super(world, id, name, position, velocity, mass, maxHealth, strafingForce,
+                    jumpingForce, crouchingForce);
+            }
+            handleInput() {
+                if (keyIsDown(65)) {
+                    this.strafingLeft = true;
+                }
+                else if (keyIsDown(68)) {
+                    this.strafingRight = true;
+                }
+                else if (keyIsDown(32) || keyIsDown(87)) {
+                    this.jumping = true;
+                }
+                else if (keyIsDown(83)) {
+                    this.crouching = true;
+                }
+                else {
+                    this.strafingLeft = false;
+                    this.strafingRight = false;
+                    this.jumping = false;
+                    this.crouching = false;
+                }
+            }
+            tick() {
+                this.handleCollision(this.world.getEntities());
+                this.handleInput();
+                this.handleMovement(1/this.world.getTickRate());
+                this.handleGravity(this.world.getGravity(), 1/this.world.getTickRate());
+                this.handleCollision(this.world.getEntities());
+            }
+            toString() {
+                return "PlayerEntity[" + this.id + ", " + this.name + ", " + this.position + ", " + this.velocity +
+                    ", " + this.mass + ", " + this.maxHealth + ", " + this.health + "]";
+            }
+        }
+        ```
+        </div>
+        As you can see, this class mostly sends its data to the superclass, apart from it has a `handleInput()` method that handles the keyboard input from the player,
+        to actually call the movement methods created in the superclass. It also overrides the `tick()` method to include the call of the `handleInput()` method.
+
+
+        <motion-canvas-player src={`/blog/platformer/jolon-e28b67cd.js`}/>
+        ## Analysis
+    </main>
+</Layout>
+
+
+

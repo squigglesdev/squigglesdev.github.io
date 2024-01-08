@@ -1,0 +1,67 @@
+main {
+    color: white;
+    margin: 0 10px;
+}
+
+#preview {
+    margin-top: 20%;
+    border-radius: 1rem;
+}
+
+h1 {
+    margin-top: 10%;
+    margin-bottom: 5%;
+}
+
+.codeBlock{
+    background-color: #24292e;
+    border-radius: 1rem;
+    padding: 1rem;
+    padding-top: 0.25rem;
+    padding-bottom: 0.25rem;
+    margin-bottom: 1rem;
+    border: 0.25rem solid;
+    border-color: #161D27;
+}
+
+video {
+    width: 10rem;
+    border: 0.25rem solid;
+    border-color: #161D27;
+    margin-top: 1rem;
+    border-radius: 1rem;
+}
+
+th {
+    padding: 0.5rem;
+    border: 0.25rem solid;
+    border-color: #161D27;
+    background-color: #161D27;
+}
+
+td {
+    padding: 0.5rem;
+    border: 0.25rem solid;
+    border-color: #161D27;
+}
+
+td > video {
+    position: relative;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -2.5%);
+}
+
+code {
+    background-color: #24292e;
+    border-radius: 5px;
+    padding: 1px;
+    font-size: 0.8rem;
+}
+
+@media screen and (min-width: 768px) {
+    main{
+        width: 50%;
+        margin: 0 auto;
+    }
+}
