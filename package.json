@@ -1,7 +1,7 @@
 {
   "name": "squigglesdev-github-io",
   "type": "module",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "scripts": {
     "dev": "astro dev",
     "start": "astro dev",
@@ -15,9 +15,7 @@
     "@motion-canvas/player": "^3.12.1",
     "astro": "^4.0.9",
     "rehype-katex": "^7.0.0",
-    "remark-math": "^6.0.0"
-  },
-  "devDependencies": {
-    "webpack-cli": "^5.1.4"
+    "remark-math": "^6.0.0",
+    "sharp": "^0.33.1"
   }
 }

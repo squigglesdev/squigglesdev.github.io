@@ -4,14 +4,15 @@ pubDate: January 03, 2024
 description: My process making a simple platformer in p5.js!
 author: Squiggles
 actions: {'Read': 'platformer'}
-previewImage: /blog/platformer/astroDev.png
+previewImage: /blog/platformer/p5Plat.png
 ---
 
 import Layout from '../../layouts/Layout.astro';
 import Navbar from '../../components/Navbar.astro';
+import AnimationPlayer from '../../components/AnimationPlayer.astro';
+
 import '../../styles/blogPosts.css';
 
-<script src="/motion-canvas-player/main.js" type="text/javascript"/>
 
 <Layout title={frontmatter.title}>
     <main>
@@ -266,7 +267,130 @@ import '../../styles/blogPosts.css';
         to actually call the movement methods created in the superclass. It also overrides the `tick()` method to include the call of the `handleInput()` method.
 
 
-        <motion-canvas-player src={`/blog/platformer/jolon-e28b67cd.js`}/>
+        ### Adding platforms
+        Now that we have the player class, let's add some platforms to the world. This will be useful as it will allow the player to jump around and test the gravity
+        and collision detection.
+
+        <div class="codeBlock">
+        ```js
+        class Platform {
+            constructor(world, id, position, width, height, color, slippery) {
+                this.world = world;
+                this.id = id;
+                this.position = position;
+                this.width  = width;
+                this.height = height;
+                this.color = color;
+                this.slippery = slippery;
+            }
+            getId() {
+                return this.id;
+            }
+            getPosition() {
+                return this.position;
+            }
+            getWidth() {
+                return this.width;
+            }
+            getHeight() {
+                return this.height;
+            }
+            getColor() {
+                return this.color;
+            }
+            getSlippery() {
+                return this.slippery;
+            }
+            getBounds() {
+                //return the top, left, bottom and rightmost coordinates of the platform
+                return {
+                    top: this.position.y - this.height/2,
+                    left: this.position.x - this.width/2,
+                    bottom: this.position.y + this.height/2,
+                    right: this.position.x + this.width/2
+                };
+            }
+            setId(id) {
+                this.id = id;
+            }
+            setPosition(position) {
+                this.position = position;
+            }
+            setWidth(width) {
+                this.width = width;
+            }
+            setHeight(height) {
+                this.height = height;
+            }
+            setColor(color) {
+                this.color = color;
+            }
+            setSlippery(slippery) {
+                this.slippery = slippery;
+            }
+            toString() {
+                return "Platform[" + this.id + ", " + this.position + ", " + this.width + ", " + this.height + ", "
+                    + this.color + ", " + this.slippery + "]";
+            }
+            draw() {
+                push();
+                rectMode(CENTER);
+                fill(this.color);
+                rect(this.position.x, this.position.y, this.width, this.height);
+                pop();
+            }
+        }
+        ```
+        </div>
+        Again, this class is mostly comprised of getters and setters, and a `draw()` method. The only thing of note is the `getBounds()` method, which returns the top, left,
+        right, and bottommost coordinates of the platform. This will be useful for collision detection.
+
+        ### Adding proper collisions
+        Speaking of, now that we have platforms, let's make entities collide with them properly! We'll need to update the `handleCollision()` method in the entity class
+        to handle collisions with other objects.
+
+        <div class="codeBlock">
+        ```js
+        handleCollision() {
+            let radius = 25;
+            if (this.position.y + 25 > height) {
+                this.position.y = height - 25;
+                this.grounded = true;
+            }
+            for (let i = 0; i < this.world.getPlatforms().length; i++) {
+                let top = this.world.getPlatforms()[i].getBounds().top;
+                let aboveTop = this.position.y - radius < top;
+
+                let left = this.world.getPlatforms()[i].getBounds().left;
+                let withinLeft = this.position.x - radius > left;
+
+                let bottom = this.world.getPlatforms()[i].getBounds().bottom;
+                let belowBottom = this.position.y - radius > bottom;
+
+                let right = this.world.getPlatforms()[i].getBounds().right;
+                let withinRight = this.position.x - radius < right;
+
+                if (!aboveTop && withinLeft && belowBottom && withinRight) {
+                    this.position.y = top - radius;
+                }
+            }
+        }
+        ```
+        </div>
+        This method loops through all the the platforms in the world, and checks if the entity is within the bounds of the platform. If it is, it moves the entity to the top of the platform.
+
+
+        ### Second test
+        Now that we have the player class and platforms, it's time to test!
+
+        Criteria:
+        - The program should run.
+        - The player should be able to be created with a name, position, velocity, mass, and max health.
+        - The player should fall due to gravity.
+        - The player should be able to move left and right.
+        - Platforms should be able to be created with a position, width, height, color, and slipperiness.
+        - The player should collide with the platforms.
+        
         ## Analysis
     </main>
 </Layout>

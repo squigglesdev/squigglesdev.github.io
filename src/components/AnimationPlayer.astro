@@ -1,0 +1,11 @@
+---
+interface Props {
+    url: string
+    banner?: boolean
+}
+---
+<script>
+    import '@motion-canvas/core';
+    import '@motion-canvas/player';
+</script>
+<motion-canvas-player src={Astro.props.url} auto={Astro.props.banner}/>
