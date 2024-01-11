@@ -10,11 +10,14 @@ previewImage: /blog/platformer/p5Plat.png
 import Layout from '../../layouts/Layout.astro';
 import Navbar from '../../components/Navbar.astro';
 import AnimationPlayer from '../../components/AnimationPlayer.astro';
+import Comments from '../../components/Comments.astro';
 
+import collisionAnim from '../../anims/collisions-1c04eb1b?url';
+import spritesAnim from '../../anims/sprites-b7274ed4?url';
 import '../../styles/blogPosts.css';
 
 
-<Layout title={frontmatter.title}>
+<Layout title={frontmatter.title} socialPreview={frontmatter.previewImage} socialDescription={frontmatter.description}>
     <main>
         <Navbar />
         <img src={frontmatter.previewImage} alt="preview" id="preview"/>
@@ -22,7 +25,7 @@ import '../../styles/blogPosts.css';
         By {frontmatter.author}, on {frontmatter.pubDate} - {frontmatter.description}
 
         ## The Idea
-        I'm going to create a simple platformer game in p5.js that involves jumping around and fighting enemies.
+        I'm going to create a simple platformer game in [p5.js](https://p5js.org/) that involves jumping around and fighting enemies.
         It won't win any awards, but it will be a fun project to work on and take you through my process of creating a game,
         especially one that is object-oriented.
 
@@ -377,7 +380,7 @@ import '../../styles/blogPosts.css';
         }
         ```
         </div>
-        This method loops through all the the platforms in the world, and checks if the entity is within the bounds of the platform. If it is, it moves the entity to the top of the platform.
+        This method loops through all the the platforms in the world, and checks if the entity is within the bounds of the platform. If it is, it moves the entity out of the bounds of the platform.
 
 
         ### Second test
@@ -390,8 +393,530 @@ import '../../styles/blogPosts.css';
         - The player should be able to move left and right.
         - Platforms should be able to be created with a position, width, height, color, and slipperiness.
         - The player should collide with the platforms.
+
+        #### Results
+        | Test | Result | Proof |
+        | ---- | ------ | ----- |
+        | The program should run. | Passed! | No errors appeared in the console. |
+        | The player should be able to be created with a name, position, velocity, mass, and max health. | Passed! | Returned: `PlayerEntity[0, Test, p5.Vector Object : [956, 0.1, 0], 10, 100, 100]` |
+        | The player should fall due to gravity. | Passed! | See video below! |
+        | The player should be able to move left and right. | Passed! | See video below! |
+        | Platforms should be able to be created with a position, width, height, color, and slipperiness. | Passed! | Returned: `Platform[0, Test, p5.Vector Object : [956, 540, 0]], 200, 50, "#FF00FF", false` |
+        | The player should collide with the platforms. | Failed. | <video src="/blog/platformer/TEST02.webm" type="video/webm" controls muted /> |
         
+        As you can see from the video, the player can move left and right, but gets stuck in some quantum entanglement nightmare when it collides with the platform.
+        We're gonna have to fix that.
+
+        ### Fixing collisions
+        This was a real head-scratcher. I couldn't figure out why the player was getting stuck in the platform. I tried everything, from changing the order of the checks,
+        to changing the way the player was moved out of the platform. I ended up fixing it (after 9 days!) thanks to [this amazing video](https://www.youtube.com/watch?v=2gABYM5M0ww&t=5387s) on creating a platformer in [Pygame](https://pyga.me/), by [DaFluffyPotato](https://www.youtube.com/@DaFluffyPotato).
+
+        The solution was simple - instead of handling collision before or after the entity moves, we handle it during the movement, for each axis.
+
+        This little animation shows how it works:
+        <AnimationPlayer url={collisionAnim} banner/>
+
+        Essenstially, we check for collisions for each axis. For this reason, we mix it in with the movement code, so that the first check is after x-axis movement, and the second check is after y-axis movement.
+        This way, we only have to worry about each axis at a time, and can get the direction of the velocity of the entity, to tell where it came from, and snap it back:
+
+        <div class="codeBlock">
+        ```js
+        handleMovement(platforms, gravity) {
+            if (isNaN(this.velocity.y) || isNaN(this.velocity.x) || isNaN(deltaTime) || isNaN(this.strafingForce)
+                    || isNaN(this.jumpingForce) || isNaN(gravity)) {
+                return;
+            }
+
+            this.velocity.y = min(100, this.velocity.y + gravity * deltaTime);
+            this.airTimer ++;
+
+            if (this.strafingLeft || this.strafingRight) {
+                if (this.strafingLeft) {
+                    this.velocity.x = max(-2, this.velocity.x - this.strafingForce * deltaTime);
+                }
+                if (this.strafingRight) {
+                    this.velocity.x = min(2, this.velocity.x + this.strafingForce * deltaTime);
+                }
+            } else {
+                this.velocity.x = this.velocity.x * 0.95;
+            }
+            this.jumpCooldown -= deltaTime;
+
+            if (this.jumping && this.jumps > 0) {
+                this.jumping = false;
+                this.jumpCooldown = 0.25;   
+                this.velocity.y = -5;
+                this.jumps -= 1;
+            }
+
+            this.position.x += this.velocity.x;
+
+            platforms.forEach(platform => {
+                const platformBounds = platform.getBounds();
+                if (this.collides(this.getBounds(), platformBounds)) {
+                    if (this.velocity.x > 0) {
+                        this.position.x = platformBounds.left - 25.1;
+                        this.velocity.y = this.velocity.y * 0.95;
+                        if (this.jumps == 0) {
+                            this.jumps = 1;
+                        }
+                    } if (this.velocity.x < 0) {
+                        this.position.x = platformBounds.right + 25.1;
+                        // drag
+                        this.velocity.y = this.velocity.y * 0.95;
+                        if (this.jumps == 0) {
+                            this.jumps = 1;
+                        }
+                    }
+                } else {
+                    this.world.setGravity(9.8);
+                }
+            });
+
+            this.position.y += this.velocity.y;
+
+            platforms.forEach(platform => {
+                const platformBounds = platform.getBounds();
+                if (this.collides(this.getBounds(), platformBounds)) {
+                    if (this.velocity.y > 0) {
+                        this.position.y = platformBounds.top - 25.1;
+                        this.velocity.y = 0;
+                        this.jumps = 2;
+                        this.airTimer = 0;
+                    } if (this.velocity.y < 0) {
+                        this.position.y = platformBounds.bottom + 25.1;
+                        this.velocity.y = 0;
+                    }
+                }
+            });
+        }
+        ```
+        </div>
+        Like I described earlier, we run the collision check after moving on each axis, and if there is a collision, we snap the entity back to the edge of the platform, and set its velocity to 0.
+        
+        Such a simple solution to such an annoying problem!
+
+        ### Third test
+        Let's run the same test critera as test 2, and see if it works now.
+
+        #### Results
+        | Test | Result | Proof |
+        | ---- | ------ | ----- |
+        | The program should run. | Passed! | No errors appeared in the console. |
+        | The player should be able to be created with a name, position, velocity, mass, and max health. | Passed! | Returned: `PlayerEntity[0, Test, p5.Vector Object : [956, 0.1, 0], 10, 100, 100]` |
+        | The player should fall due to gravity. | Passed! | See video below! |
+        | The player should be able to move left and right. | Passed! | See video below! |
+        | Platforms should be able to be created with a position, width, height, color, and slipperiness. | Passed! | Returned: `Platform[0, Test, p5.Vector Object : [956, 540, 0]], 200, 50, "#FF00FF", false` |
+        | The player should collide with the platforms. | Passed! | <video src="/blog/platformer/TEST03.webm" type="video/webm" controls muted /> |
+        
+        Yes, the player is square now. And the background is blue. I think it looks nicer for now!
+
+        ### Adding enemies
+        Enemies! These will finally give the game some life. Let's create an enemy class that inherits from the entity class.
+
+        <div class="codeBlock">
+        ```js
+        class EnemyEntity extends Entity {
+            constructor (world, id, name, position, velocity, mass, maxHealth, width, height, strafingForce,
+                    jumpingForce, patrolPoints) {
+                super(world, id, name, position, velocity, mass, maxHealth, width, height, strafingForce,
+                    jumpingForce);
+
+                this.patrolPoints = patrolPoints;
+                this.patrolIndex = 0;
+                this.goals = {
+                    patrol: this.patrolGoal.bind(this),
+                    chase: this.chaseGoal.bind(this),
+                    attack: this.attackGoal.bind(this)
+                }
+                this.flipped = false;
+                this.goalOrder = [];
+                this.SPRITE;
+                this.enemyFall = enemyFall;
+                this.enemyJump = enemyJump
+            }
+
+            draw() {
+                push();
+                fill(255, 0, 0);
+                imageMode(CENTER);
+                if (this.flipped) {
+                    push();
+                    scale(-1, 1);
+                    image(this.SPRITE, -this.position.x, this.position.y, this.width, this.height);
+                    pop();
+                } else {
+                    image(this.SPRITE, this.position.x, this.position.y, this.width, this.height);
+                }
+                
+
+                fill(100, 100, 100);
+                rect(this.position.x - this.width/6, this.position.y - 100, 50, 10);
+                fill(255, 0, 0);
+                rect(this.position.x - this.width/6, this.position.y - 100, this.health * 5, 10);
+                pop();
+            }
+
+            tick() {
+                this.runGoals(this.goalOrder);
+                this.handleMovement(this.world.getPlatforms(), this.world.getGravity());
+                this.handleHealth();
+                this.animation();
+            }
+
+            setGoalOrder(goalList) {
+                this.goalOrder = goalList;
+            }
+            
+
+            runGoals(goalList) {
+                for (const goal of goalList) {
+                    if (goal()) {
+                        break;
+                    }
+                }
+            }
+
+
+            patrolGoal() {
+                const currentWaypoint = this.patrolPoints[this.patrolIndex];
+                const distanceToWaypoint = currentWaypoint.x - this.position.x;
+                const direction = currentWaypoint.copy().sub(this.position).normalize();
+                if (Math.abs(distanceToWaypoint) > 5) {
+                    if (direction.x > 0) {
+                        this.strafingRight = true;
+                        this.strafingLeft = false;
+                        this.maxSpeed = 2;
+                    } else if (direction.x < 0) {
+                        this.strafingLeft = true;
+                        this.strafingRight = false;
+                        this.maxSpeed = 2;
+                    }
+                } else {
+                    this.patrolIndex = (this.patrolIndex + 1) % this.patrolPoints.length;
+                }
+
+                return true;
+            }
+
+            chaseGoal() {
+                const player = this.world.getPlayer();
+                if (player == null) {
+                    return false;
+                }
+                const distanceToPlayer = player.getPosition().x - this.position.x;
+                const direction = player.getPosition().copy().sub(this.position).normalize();
+
+                if (Math.abs(distanceToPlayer) > 750) {
+                    return false;
+                }
+                if (this.strafingLeft && direction.x > 0) {
+                    return false;
+                }
+                else if (this.strafingRight && direction.x < 0) {
+                    return false;
+                }
+                else {
+                    if (direction.x > 0) {
+                        this.strafingRight = true;
+                        this.strafingLeft = false;
+                        this.maxSpeed = 4;
+                    } else if (direction.x < 0) {
+                        this.strafingLeft = true;
+                        this.strafingRight = false;
+                        this.maxSpeed = 4;
+                    }
+                }
+
+                return true;
+            }
+            attackGoal() {
+                const player = this.world.getPlayer();
+
+                if (player == null) {
+                    return false;
+                }
+                if (dist(this.position.x, this.position.y, player.position.x, player.position.y) < 70) {
+                    this.strafingLeft = false;
+                    this.strafingRight = false;
+                    this.attack();
+                    return true;
+                } else {
+                    return false;
+                }
+            }
+            dummyGoal() {
+                return true;
+            }
+
+            animation() {
+
+                if (this.wallTimer > 0.05) {
+                    this.enemyFall = enemyOldFall;
+                    this.enemyJump = enemyOldJump;
+                }
+            
+                if (this.velocity.y > 0.1) {
+                    this.SPRITE = this.enemyFall;
+                    if (this.strafingLeft) {
+                        this.flipped = false;
+                    } else if (this.strafingRight) {
+                        this.flipped = true;
+                    }
+                } else if (this.velocity.y < 0) {
+                    this.SPRITE = this.enemyJump;
+                    if (this.strafingLeft) {
+                        this.flipped = false;
+                    } else if (this.strafingRight) {
+                        this.flipped = true;
+                    } 
+                    if (this.enemyFall == enemyWallFall) {
+                        this.SPRITE = enemyWallJump;
+                    }
+                } else {
+                    if ((this.strafingLeft || this.strafingRight) && animationFrame == 1) {
+                        this.SPRITE = enemyWalk1;
+                        if (this.strafingLeft) {
+                            this.flipped = false;
+                        } else if (this.strafingRight) {
+                            this.flipped = true;
+                        }
+                    } else if ((this.strafingLeft || this.strafingRight) && animationFrame == 2) {
+                        this.SPRITE = enemyWalk2;
+                        if (this.strafingLeft) {
+                            this.flipped = false;
+                        } else if (this.strafingRight) {
+                            this.flipped = true;
+                        }
+                    } else if ((this.strafingLeft || this.strafingRight) && animationFrame == 3) {
+                        this.SPRITE = enemyWalk3;
+                        if (this.strafingLeft) {
+                            this.flipped = false;
+                        } else if (this.strafingRight) {
+                            this.flipped = true;
+                        }
+                    } else if ((this.strafingLeft || this.strafingRight) && animationFrame == 4) {
+                        this.SPRITE = enemyWalk4;
+                        if (this.strafingLeft) {
+                            this.flipped = false;
+                        } else if (this.strafingRight) {
+                            this.flipped = true;
+                        }
+                    } else {
+                        if (animationFrame % 4 == 0) {
+                            this.SPRITE = enemyIdle1;
+                        } else {
+                            this.SPRITE = enemyIdle2;
+                        }
+                    }
+                }
+            }
+            
+        }
+        ```
+        </div>
+        As you can see, this class is huge! It has a lot of methods, and a lot of attributes. Let's go through them.
+
+        #### Animation
+        The first thing of note is that my very good friend [mewchu_idk](https://mewchuidk.carrd.co/) created some sprites for me!
+        They are very simple and cute, and I love them. I've added them to the game, and implemented a very basic animation system for them.
+
+        <AnimationPlayer url={spritesAnim} banner/>
+
+        #### AI Goals
+        The next thing of note is the `goals` attribute. For this I took inspiration from the way [Minecraft](https://minecraft.net) handles its entity AI.
+        It is a dictionary of goal functions to choose from. The functions chosen are then called by the `runGoals()` method:
+
+        <div class="codeBlock">
+        ```js
+        runGoals(goalList) {
+            for (const goal of goalList) {
+                if (goal()) {
+                    break;
+                }
+            }
+        }
+        ```
+        </div>
+        This simply loops through the list of provided goals, and and checks if they are "possible" (return true). If they are, it runs them, and then breaks out of the loop. This allows
+        us to have a list of goals that are run in order, with the highest priority at the top, and if one is possible, it is run, and the rest (lower priority) are ignored.
+
+        One type of goal is the `chaseGoal()`. This goal is "possible" if the player is within 750 pixels of the enemy. If it is, the enemy will chase the player. This is done by
+        setting the `strafingLeft` and `strafingRight` attributes to true, depending on the direction of the player:
+
+        <div class="codeBlock">
+        ```js
+        chaseGoal() {
+            const player = this.world.getPlayer();
+            if (player == null) {
+                return false;
+            }
+            const distanceToPlayer = player.getPosition().x - this.position.x;
+            const direction = player.getPosition().copy().sub(this.position).normalize();
+
+            if (Math.abs(distanceToPlayer) > 750) {
+                return false;
+            }
+            if (this.strafingLeft && direction.x > 0) {
+                return false;
+            }
+            else if (this.strafingRight && direction.x < 0) {
+                return false;
+            }
+            else {
+                if (direction.x > 0) {
+                    this.strafingRight = true;
+                    this.strafingLeft = false;
+                    this.maxSpeed = 4;
+                } else if (direction.x < 0) {
+                    this.strafingLeft = true;
+                    this.strafingRight = false;
+                    this.maxSpeed = 4;
+                }
+            }
+            return true;
+        }
+        ```
+        </div>
+
+        ### Fourth test
+        It's testing time once again!
+
+        Criteria:
+        - The program should run.
+        - The enemy should be able to be created with a name, position, velocity, mass, and max health.
+        - The enemy should fall due to gravity.
+        - The enemy should be able to move left and right.
+        - The enemy should collide with platforms.
+        - The enemy should take a list of goals, and run them in priority order.
+
+        #### Results
+        | Test | Result | Proof |
+        | ---- | ------ | ----- |
+        | The program should run. | Passed! | No errors appeared in the console. |
+        | The enemy should be able to be created with a name, position, velocity, mass, and max health. | Passed! | Returned: `EnemyEntity[0, Test, p5.Vector Object : [956, 0.1, 0], 10, 100, 100]` |
+        | The enemy should fall due to gravity. | Passed! | See video below! |
+        | The enemy should be able to move left and right. | Passed! | See video below! |
+        | The enemy should collide with platforms. | Passed! | See video below! |
+        | The enemy should take a list of goals, and run them in priority order. | Passed! | <video src="/blog/platformer/TEST04.webm" type="video/webm" controls muted/>
+
+        ### Final touches
+        Now that all of our systems are in place, let's add some UI and "juice" to the game. I'm going to add a health bar, a parallax background, a tutorial, and some screen shake.
+
+        #### Health bar
+        This is super simple! I just added a rectangle to the main `draw()` method, and made it change size depending on the player's health. I also added mini health bars to the enemies.
+
+        #### Parallax background
+        This one is a bit more complex. I created a `Camera` class that handles the position of a fake camera, and then translates the world to that position. Then, in the world class, I added a `drawBackground()` method:
+
+        <div class="codeBlock">
+        ```js
+            drawBackground() {
+            background(0);	
+            for (let x = -bgWidth; x < width * 8; x += bgWidth - 1) {
+                for (let y = -bgHeight; y < height; y += bgHeight - 1) {
+                    image(bg, x - this.camera.x * 0.5, y - this.camera.y * 0.5, bgWidth, bgHeight);
+                }
+            }
+        }
+        ```
+        </div>
+        This method tiles the image across the screen, and translates it by half of the camera's position, so that it appears to move slower than the player.
+
+        #### Screen shake
+        In our new `Camera` class, I added a `shake()` and `performShake()` method:
+
+        <div class="codeBlock">
+        ```js
+        shake(strength, duration){
+            this.shakeStrength = strength;
+            this.shakeDuration = duration;
+        }
+        performShake(strength) {
+            this.x += random(-strength, strength);
+            this.y += random(-strength, strength);
+        }
+        ```
+        </div>
+        The `shake()` method sets the strength and duration of the shake, and the `performShake()` method actually performs the shake. These methods can be called whenever, such as when the player takes damage, or dies.
+
+        #### Tutorial
+        This was by far the simplest thing to add. I just added some text fields around the world. However! I couldn't help but make the text overly sarcastic. So I collaborated with [ChatGPT](https://chat.openai.com),
+        and created these messages:
+
+        > *Ah, the abyss welcomes you! Revel in the thrill of using the groundbreaking A and D keys for a riveting horizontal journey.*
+
+        > *Behold the majestic space and W keys– gatekeepers to the world of vertical enlightenment. Press them to ascend to new heights.*
+
+        > *Double-jump, because clearly, one jump is for beginners. Show off your gravity-defying skills!*
+
+        > *Walls aren't just for holding up ceilings. Grab them, jump off them, become the parkour prodigy you were always meant to be.*
+
+        > *Congratulations, you navigated a straight line. I'm sure Nobel Prize committees are taking note.*
+
+        > *Meet our resident dummy – a real Shakespearean tragedy in the making. Left click to end its miserable existence, if you fancy.*
+
+        > *Oh, and you probably shouldn't fall in the lava. It's hot.*
+
+        > *Meet your new best friend – alive, kicking, and ready to spice up your life. But beware, it's got a knack for the whole 'murdering you' thing. Proceed with caution, or not. Your call.*
+
+        Those were super fun to make, and I think they add a lot of character to the game.
+
+        ### Final test
+        Let's run the final test!
+
+        Criteria:
+        - The program should run.
+        - The player should be able to be created with a name, position, velocity, mass, and max health.
+        - The player should fall due to gravity.
+        - The player should be able to move left and right.
+        - Platforms should be able to be created with a position, width, height, color, and slipperiness.
+        - The player should collide with the platforms.
+        - Enemies should be able to be created with a name, position, velocity, mass, and max health.
+        - Enemies should fall due to gravity.
+        - Enemies should be able to move left and right.
+        - Enemies should collide with platforms.
+        - Enemies should take a list of goals, and run them in priority order.
+        - The game should have a health bar.
+        - The game should have a parallax background.
+        - The game should have a tutorial.
+        - The game should have screen shake.
+
+        #### Results
+        | Test | Result | Proof |
+        | ---- | ------ | ----- |
+        | The program should run. | Passed! | No errors appeared in the console. |
+        | The player should be able to be created with a name, position, velocity, mass, and max health. | Passed! | Returned: `PlayerEntity[0, Test, p5.Vector Object : [956, 0.1, 0], 10, 100, 100]` |
+        | The player should fall due to gravity. | Passed! | See video below! |
+        | The player should be able to move left and right. | Passed! | See video below! |
+        | Platforms should be able to be created with a position, width, height, color, and slipperiness. | Passed! | Returned: `Platform[0, Test, p5.Vector Object : [956, 540, 0]], 200, 50, "#FF00FF", false` |
+        | The player should collide with the platforms. | Passed! | See video below! |
+        | Enemies should be able to be created with a name, position, velocity, mass, and max health. | Passed! | Returned: `EnemyEntity[0, Test, p5.Vector Object : [956, 0.1, 0], 10, 100, 100]` |
+        | Enemies should fall due to gravity. | Passed! | See video below! |
+        | Enemies should be able to move left and right. | Passed! | See video below! |
+        | Enemies should collide with platforms. | Passed! | See video below! |
+        | Enemies should take a list of goals, and run them in priority order. | Passed! | See video below! |
+        | The game should have health bars. | Passed! | See video below! |
+        | The game should have a parallax background. | Passed! | See video below! |
+        | The game should have a tutorial. | Passed! | See video below! |
+        | The game should have screen shake. | Passed! | <video src="/blog/platformer/TEST05.webm" controls muted /> |
+
         ## Analysis
+        Let's compare our final product to our original criteria:
+
+        | Criteria | Result |
+        | -------- | ------ |
+        | A base entity class that the player and enemies will inherit from. | This cirteria has 100% been met by the `Entity` class. |
+        | A world class that will contain the player and enemies, as well as the platforms and other objects in the world. | This cirteria has 100% been met by the `World` class. |
+        | The ability of enemies to pathfind to the player and attack them. | "Pathfinding" is a bit of a stretch, but the enemies have functional AI and do chase the player and attack them if told to. |
+        | A friendly user interface that allows the player to see their health and other stats. | This criteria has been met by the health bars, but also by the `Camera` class, the tutorial text, and the `handleInput()` method in the `PlayerEntity` class, as user input is definitely a form of user interface. |
+
+        ## Conclusion
+        I'm very happy with the result of this project. I think it's a great example of how to use object-oriented programming to create a game, and it strengthened my understanding of the
+        concepts of OOP. I also think it's a great example of how to use the [p5.js](https://p5js.org/) library to create a game. I'm very happy with the result, and I hope you are too!
+
+        <Comments /> 
+        Thanks for reading!
     </main>
 </Layout>
 

@@ -24,8 +24,18 @@ h1 {
     border-color: #161D27;
 }
 
+a {
+    color: #58a6ff;
+    text-decoration: none;
+}
+
+a:hover {
+    color: #58a6ff;
+    text-decoration: underline;
+}
+
 video {
-    width: 10rem;
+    height: 20rem;
     border: 0.25rem solid;
     border-color: #161D27;
     margin-top: 1rem;

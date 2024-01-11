@@ -7,6 +7,7 @@ export interface Props {
 const {title, actions} = Astro.props;
 ---
 
+
 <div class="card">
   <div class="preview">
     <slot name="header" />
@@ -47,8 +48,15 @@ const {title, actions} = Astro.props;
     max-width: 700px;
     cursor: pointer;
   }
+  .card a{
+	text-decoration: none;
+	color: #fff;
+  }
+
   .card:hover a{
     font-weight: 400;
+	text-decoration: none;
+	color: #fff;
   }
   .card:hover a::after{
     content: " →";
