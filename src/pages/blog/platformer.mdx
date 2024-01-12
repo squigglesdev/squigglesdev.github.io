@@ -104,9 +104,9 @@ import '../../styles/blogPosts.css';
         </div>
         This code mostly consists of getters and setters for the attributes of the world, and that's about it. The only other thing of note is the `tick()` method,
         which calls the `tick()` method of each entity in the world, and then waits for `1/tickRate` seconds. This is so that the game runs at a consistent speed, and
-        doesn't run faster on faster computers (foreshadowing).
+        doesn't run faster on faster computers.
 
-        Here you'll notics that I've left out the logic for handling gravity acting on the entities. This is because I wanted entities to handle their own gravity, so
+        Here you'll notice that I've left out the logic for handling gravity acting on the entities. This is because I wanted entities to handle their own gravity, so
         collisions would be easier to handle.
 
         ### Implementing gravity
