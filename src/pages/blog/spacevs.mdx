@@ -1,0 +1,103 @@
+---
+title: Space Shooter - Devlog 0
+pubDate: April 02, 2024
+description: Making a veritcal slice of my upcoming space shooter game.
+author: Luke (236090)
+actions: {'Read': 'spacevs'}
+previewImage: /blog/spacevs/thumb.png
+---
+
+import Layout from '../../layouts/Layout.astro';
+import Navbar from '../../components/Navbar.astro';
+import AnimationPlayer from '../../components/AnimationPlayer.astro';
+import Comments from '../../components/Comments.astro';
+
+import '../../styles/blogPosts.css';
+
+<Layout title={frontmatter.title} socialPreview={frontmatter.previewImage} socialDescription={frontmatter.description}>
+    <main>
+        <Navbar />
+        <img src={frontmatter.previewImage} alt="preview" id="preview"/>
+        # Space Shooter - Devlog 0
+        By {frontmatter.author}, on {frontmatter.pubDate} - {frontmatter.description}
+        
+        Centre Number - 58319
+
+        ## The Big Idea
+        Why do I suddenly want to make a shooter game in space? Well, there are two reasons:
+        1. I have a big software engineering project in college that this would work great for.
+
+        2. (and this is the main one) Modern first person shooter games do not utilise the 3rd dimension
+        to the fullest capacity. Players are restricted to mostly horizontal and lateral movement, with
+        little opportunity for viable vertical movement. I want to make a game that changes that.
+
+        ## Research
+        Let's look at some games that are popular today, and see how they use the 3rd dimension, and the general mechanics of the game.
+
+        ### Valorant
+        <center><img src="/blog/spacevs/valorant_logo.png" alt="Valorant" id="research-img"/>
+        https://playvalorant.com/
+        </center>
+
+        Valorant is a 5v5 tactical shooter where players take on the role of agents with unique abilities.
+
+        The game is played in a series of rounds, where the first team to win 13 rounds wins the game.
+
+        It involves bringing a "spike" (bomb) to a designated area on the map and planting it, while the other team attempts to stop them.
+
+        [Image/video of Valorant gameplay]
+
+        This brings about an interesting role-reversal, as while the defending team must defend the spike site, if the attackers get through and plant the spike,
+        the defenders must then retake the site and become aggressive. This creates a dynamic gameplay loop that keeps the game interesting.
+
+        The game features movement in all directions, but the vertical movement (in most cases) is limited to jumping and crouching. The game is 
+        mostly played on a 2D plane, with a few higher up places created to introduce angles that players can shoot from.
+
+        My main takeaway from this game is the mechanics of a tactical shooter, and how the game is balanced around the spike mechanic. I want to
+        create someting similar!
+
+        <br/>
+
+        ### Star Citizen
+        <center><img src="/blog/spacevs/star_citizen_logo.png" alt="Star Citizen" id="research-img"/>
+        https://robertsspaceindustries.com/
+        </center>
+
+        Star Citizen is a space simulation game that allows players to explore the galaxy, mine resources, trade, and engage in combat.
+        For the purposes of this research, I will be focusing on the combat aspect of the game.
+
+        The game features a fully 3D environment, with players able to move in all directions. The game features a variety of ships, each with their own
+        unique abilities and weapons.
+
+        [Image/video of Star Citizen gameplay]
+
+        Where this game falls short is the hand-to-hand combat. The game is mostly played in ships, and the combat is mostly done with guns and missiles.
+        In my game, I want there to be a mix of both ship combat and hand-to-hand combat.
+
+        This game is a great example of how the 3rd dimension can be used in a game. Players can move in all directions, freely rotate themselves in space,
+        and engage in combat in a 3D environment. This is the kind of gameplay I want to create in my game.
+        
+
+        ## The Plan
+        I want to create a game that combines the tactical shooter aspect of Valorant with the 3D movement of Star Citizen. Each team will start on their own planet,
+        and must get to the other team's planet to plant a bomb.
+
+        It will include both ship and hand-to-hand combat, with many different strategies to win.
+        I want it to be quite open to player creativity, eg. kamakahzi'ing your ship into the enemy planet to take out their defenses.
+
+        [Diagram of idea]
+
+        I will be using Unity to create this game, as it is a powerful game engine that I am familiar with.
+
+        For this devlog, I will be creating a vertical slice of the game. This means I will be creating a small part of the game that includes some of the core mechanics.
+        This will help me to get a feel for the game, and see if the idea is viable.
+
+        Let's set out some success criteria for this vertical slice:
+
+        ### Success Criteria
+        - Players can join an online matchmaking queue and be matched with other players
+        - Players can choose a ship and a character to play as
+        - Players can move around on a planet and shoot at each other
+        - Players can get into a ship and fly around in space
+    </main>
+</Layout>
