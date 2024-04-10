@@ -1,6 +1,9 @@
 ---
 import Project from '../components/Project.astro';
-const posts = await Astro.glob('../pages/blog/*.mdx');
+let posts = await Astro.glob('../pages/blog/*.mdx');
+console.log(posts);
+posts.sort((a, b) => new Date(b.frontmatter.pubDate).getTime() - new Date(a.frontmatter.pubDate).getTime());
+console.log(posts);
 ---
 <div class="hero">
     <h1>Blog</h1>
