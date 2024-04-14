@@ -13,6 +13,11 @@ main {
     border-radius: 1rem;
 }
 
+#classTable {
+    border-radius: 10px;
+    max-width: 75%;
+}
+
 h1 {
     margin-top: 10%;
     margin-bottom: 5%;
@@ -88,5 +93,9 @@ center > p {
     main{
         width: 50%;
         margin: 0 auto;
+    }
+
+    #classTable {
+        max-width: 30%;
     }
 }

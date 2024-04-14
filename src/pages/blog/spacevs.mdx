@@ -99,5 +99,45 @@ import '../../styles/blogPosts.css';
         - Players can choose a ship and a character to play as
         - Players can move around on a planet and shoot at each other
         - Players can get into a ship and fly around in space
+
+        ## Structure
+
+        ### Controllable GameObjects
+
+        Any `GameObject` controllable by the player (characters and ships) will have a `Controller` script attached to them. This is an object-oriented C# script that can be extended or attached to any `GameObject` in Unity as a component.
+        
+        Most Unity component scripts extend from `MonoBehaviour`, which is a base class that allows the script to interact with the Unity engine and get basic information about the `GameObject` they are attached to.
+
+        Here is the basic structure of the `Controller` script:
+    
+        <center><img src="/blog/spacevs/Controller.svg" alt="Controller script class table" id="classTable" /></center>
+
+        It has some private vector properties to store the object's `currentVelocity` and `gravityDirection`, which are used to calculate the object's movement.
+        
+        The `gravityDirection` variable is a normalized vector that points towards the centre of the nearest planet, importantly ensuring that the object is always pulled towards the planet.
+
+        It also has some public properties, such as a boolean property `isGrounded`, and a float property `totalAmmo`. These are used to store the object's current state and ammunition count.
+
+        The `Controller` script also has some methods, which include three private methods `Awake()`, `Update()`, and `FixedUpdate()`. These methods are called by Unity at different points in the game loop, and return `void`.
+
+        The final method `Shoot()` is a public method that is called when the object wants to shoot their weapon. This method will instantiate a new bullet object and apply a force to it in the direction the object is facing. (More on this later!)
+
+        ### Networking
+
+        The game will be multiplayer, so I will need to implement some networking code to allow players to connect to each other and play together.
+        I've decided to use the Colyseus library for this, as it is a simple and easy-to-use library that is well-documented.
+
+        <center><img src="/blog/spacevs/colyseus_logo.svg" alt="Colyseus" id="research-img" />
+        https://colyseus.io/
+        </center>
+
+        Colyseus provides a simple API for creating multiplayer games, that is supported on many platforms including Unity. It allows for real-time communication between clients and servers, and provides a simple way to create rooms and matchmake players.
+
+        I will have to write the Colyseus server in Node.js/TypeScript, and the client in Unity/C#.
+
+        Colyseus works using a system of "rooms", which are essentially game instances that players can join. The server will create a new "waiting" room when a player wants to play, and will matchmake players into rooms based on their skill level.
+
+        Information about players and rooms is stored in a "state" object, which is a JSON object that is updated in real-time as players join and leave rooms.
+
     </main>
 </Layout>
