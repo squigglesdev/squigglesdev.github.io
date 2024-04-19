@@ -1,10 +1,32 @@
 <nav class="navbar">
-    <img class="pfp" src="/pfp.png" alt="logo"/>
+    <div class="pfpAndHamburger">
+        <img class="pfp" src="/pfp.png" alt="logo"/>
+        <button class="hamburger" onclick=`
+            const container = document.getElementsByClassName("buttons")[0];
+            if (container.style.flexDirection === "column") {
+                container.parentElement.style = null;
+                container.style = null;
+                for (const child of container.children) {
+                    child.style.width = null;
+                }
+            } else {
+                container.parentElement.style.flexDirection = "column";
+                container.parentElement.style.gap = "20px";
+                container.style.flexDirection = "column";
+                container.style.height = "auto";
+                container.style.width = "100%";
+                console.log(container.children);
+                container.style.display = "flex";
+                for (const child of container.children) {
+                    child.style.width = "auto";
+                }
+            }
+        `><img src="/menu.svg" alt="menu"/></button>
+    </div>
     <div class="buttons">
         <button onclick="location.href='/'"><span class="buttontext">Home</span></button>
-        <button onclick="location.href='/blog/'"><span class="buttontext">Blog</span></button>
-        <button onclick="location.href='http://linktr.ee/squigglesdev'"><span class="buttontext">Links</span></button>
-    <button class="hamburger" onclick="alert("Hacked lol")"><img src="/menu.svg" /></button>
+        <button onclick="location.href='/blog/'"><span class="buttontext">Projects</span></button>
+        <button onclick="location.href='https://linktr.ee/squigglesdev'"><span class="buttontext">Links</span></button>
     </div>
 </nav>
 <style>
@@ -15,6 +37,7 @@
         transform: translateX(-50%);
         display: flex;
         align-items: flex-start;
+        flex-direction: row;
         padding: 6px;
         gap: 25vw;
         width: auto;
@@ -26,6 +49,7 @@
         backdrop-filter: blur(10px);
         -webkit-backdrop-filter: blur(10px);
         z-index: 100;
+        transition: height 0.5s ease-out;
     }
 
     .pfp {
@@ -35,9 +59,18 @@
         border-radius: 8px;
     }
 
+    .pfpAndHamburger {
+        display: flex;
+        width: 100%;
+        justify-content: space-between;
+    }
+
     .buttons {
         display: flex;
         gap: 10px;
+        flex-direction: row;
+        height: auto;
+        transition: height 0.5s ease-out;
     }
 
     button {
@@ -47,14 +80,14 @@
         border: 1.6px solid #161D27;
         border-radius: 8px;
         box-sizing: border-box;
-	  cursor: pointer;
+	    cursor: pointer;
     }
     .hamburger {
         width: 38px;
         display: none;
     }
     .buttontext{
-	  font-family: 'Cera Pro', 'Century Gothic', sans-serif;
+	    font-family: 'Cera', 'Century Gothic', sans-serif;
         font-style: normal;
         font-weight: 300;
         font-size: 14px;
@@ -77,11 +110,28 @@
             gap: auto;
             width: 90%;
         }
-        button {
+        .buttons {
             display: none;
+            height: 0;
         }
+
+        button {
+            height: 57px;
+        }
+
+        .buttontext {
+            font-size: 20px;
+        }
+
         .hamburger {
             display: block;
+            width: 57px;
+            height: 57px;
+        }
+
+        .pfp {
+            width: 57px;
+            height: 57px;
         }
     }
 </style>

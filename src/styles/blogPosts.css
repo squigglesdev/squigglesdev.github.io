@@ -89,6 +89,18 @@ center > p {
     margin-bottom: 20px;
 }
 
+iframe {
+    border-radius: 1rem;
+    max-width: 100%;
+    height: auto;
+    aspect-ratio: 400 / 421;
+}
+
+#iframe-holder {
+    display: flex;
+    justify-content: center;
+}
+
 @media screen and (min-width: 768px) {
     main{
         width: 50%;
@@ -97,5 +109,9 @@ center > p {
 
     #classTable {
         max-width: 30%;
+    }
+
+    iframe {
+        max-width: 800px;
     }
 }

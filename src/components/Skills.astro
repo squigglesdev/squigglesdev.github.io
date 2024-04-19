@@ -4,7 +4,7 @@ import { Image } from 'astro:assets';
 
 <div class="hero">
     <h2>Skills</h2>
-    <p>I’m proficient in a wide range of languages, and over the past year my artistic ability has improved significantly - especially in pixel art, so I’m not in a bad place! Here are some of the languages and tools I can work with:</p>
+    <p>I’m proficient in a wide range of languages, and over the past few years my artistic ability has improved significantly - especially in pixel art, so I’m not in a bad place! Here are some of the languages and tools I can work with:</p>
     <div id="bar">
         <Image src="/images/python.png" alt="Python" width="50" height="50" class="icon" id="python" title="Python"/>
         <Image src="/images/java.png" alt="Java" width="50" height="50" class="icon" id="java" title="Java"/>
@@ -26,13 +26,13 @@ import { Image } from 'astro:assets';
         transform: translateX(-50%);
         gap: -5px;
         color: white;
-        margin-top: 10%;
     }
     #bar{
         display: flex;
         flex-direction: row;
         justify-content: space-between;
         margin-top: 20px;
+        margin-bottom: 20px;
         padding: 6px;
         background: rgba(16, 21, 27, 0.7);
         border: 1.6px solid;
@@ -43,13 +43,14 @@ import { Image } from 'astro:assets';
     }
     .icon{
         position: relative;
-        width: auto;
+        width: 50px;
         height: 50px;
         border: 1.6px solid;
 	    border-color: #161D27;
         padding: 2px;
         border-radius: 5px;
         transition: scale 0.25s;
+        aspect-ratio: 1/1;
     }
 
     .icon:hover{
@@ -123,6 +124,7 @@ import { Image } from 'astro:assets';
     @media screen and (max-width: 900px) {
         .hero {
             width: 90%;
+            margin-top: 70%;
         }
     @media screen and (max-width: 636px) {
         h2 {
@@ -130,6 +132,12 @@ import { Image } from 'astro:assets';
         }
         p {
             line-height: 1.3;
+        }
+        #bar {
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 10px;
+            width: auto;
         }
     }
 </style>

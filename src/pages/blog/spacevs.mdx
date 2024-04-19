@@ -118,7 +118,7 @@ import '../../styles/blogPosts.css';
 
         It also has some public properties, such as a boolean property `isGrounded`, and a float property `totalAmmo`. These are used to store the object's current state and ammunition count.
 
-        The `Controller` script also has some methods, which include three private methods `Awake()`, `Update()`, and `FixedUpdate()`. These methods are called by Unity at different points in the game loop, and return `void`.
+        The `Controller` script also has some methods, which include three private methods `Awake()`, `Update()`, and `FixedUpdate()`. These methods are called by Unity at different points in the game loop, and return `void`, or nothing.
 
         The final method `Shoot()` is a public method that is called when the object wants to shoot their weapon. This method will instantiate a new bullet object and apply a force to it in the direction the object is facing. (More on this later!)
 
@@ -139,5 +139,991 @@ import '../../styles/blogPosts.css';
 
         Information about players and rooms is stored in a "state" object, which is a JSON object that is updated in real-time as players join and leave rooms.
 
+        ## Results
+
+        ### Controllable GameObjects
+
+        I have decided against making a `Controller` script, as I he found that other controllable GameObjects (such as space ships) will use a different set of properties and methods to control their movement.
+
+        Instead, I have created a `PlayerController` script to be attached to the player GameObject. The two main methods of this script are `HandleMovement()` (called in `Update()` every frame), and `FixedUpdate()`.
+
+        Let's take a look at `HandleMovement()`:
+
+        <div class="codeBlock">
+        ```csharp
+        void HandleMovement () {
+            // Looking around
+            yaw += Input.GetAxisRaw("Mouse X") * mouseSensitivity;
+
+            pitch -= Input.GetAxisRaw("Mouse Y") * mouseSensitivity;
+
+            // Clamp and smooth pitch
+            pitch = Mathf.Clamp(pitch - Input.GetAxisRaw("Mouse Y") * mouseSensitivity, pitchMinMax.x, pitchMinMax.y);
+            smoothPitch = Mathf.SmoothDampAngle(smoothPitch, pitch, ref pitchSmoothV, rotationSmoothTime);
+
+            float smoothYawOld = smoothYaw;
+            smoothYaw = Mathf.SmoothDampAngle(smoothYaw, yaw, ref yawSmoothV, rotationSmoothTime);
+
+            cam.transform.localEulerAngles = Vector3.right * smoothPitch;
+            transform.Rotate(Vector3.up * Mathf.DeltaAngle (smoothYawOld, smoothYaw), Space.Self);
+
+            // Movement
+            bool isGrounded = IsGrounded();
+
+            Vector3 input = new Vector3(Input.GetAxisRaw("Horizontal"), 0, Input.GetAxisRaw("Vertical"));
+
+            float currentSpeed = Input.GetKey(KeyCode.LeftShift) ? runSpeed : walkSpeed;
+
+            targetVelocity = transform.TransformDirection (input.normalized) * currentSpeed;
+            smoothVelocity = Vector3.SmoothDamp(smoothVelocity, targetVelocity, ref smoothVRef, 
+                    (isGrounded) ? vSmoothTime : airSmoothTime);
+
+            if (isGrounded) {
+                if (Input.GetKeyDown(KeyCode.Space)) {
+                    rb.AddForce(transform.up * jumpForce, ForceMode.VelocityChange);
+                    isGrounded = false;
+                } else {
+                    // Apply small downward force to prevent player from bouncing when going down slopes
+                    rb.AddForce(-transform.up * stickToGroundForce, ForceMode.VelocityChange);
+                }
+            }
+        }
+        ```
+        </div>
+
+        This method handles the player's movement and looking around. It takes input from the mouse and keyboard, and applies it to the player's transform. The player can look around using the mouse, and move using the WASD keys.
+
+        The player's movement is smoothed using `SmoothDamp` functions, which makes the movement feel more natural. The player can also jump using the space bar.
+
+        I'd like to highlight the line:
+        <div class="codeBlock">
+        ```csharp
+        float currentSpeed = Input.GetKey(KeyCode.LeftShift) ? runSpeed : walkSpeed;
+        ```
+        </div>
+        This is a ternary expression that sets the player's speed based on whether the left shift key is pressed. If it is, the player will run, otherwise they will walk.
+
+        Ternary expressions are a great way to write simple if-else statements in a single line of code.
+
+        <br />
+
+        Now, let's take a look at `FixedUpdate()`:
+
+        <div class="codeBlock">
+        ```csharp
+        void FixedUpdate() {
+            Planet[] planets = PlanetSimulation.Planets;
+            Vector3 strongestGravitionalPull = Vector3.zero;
+
+            // Gravity
+            foreach (Planet planet in planets) {
+                float sqrDst = (planet.Position - rb.position).sqrMagnitude;
+                Vector3 forceDir = (planet.Position - rb.position).normalized;
+                Vector3 acceleration = planet.mass * Universe.gravitationalConstant * forceDir / sqrDst;
+                rb.AddForce(acceleration, ForceMode.Acceleration);
+
+                // Find planet with strongest gravitational pull 
+                if (acceleration.sqrMagnitude > strongestGravitionalPull.sqrMagnitude) {
+                    strongestGravitionalPull = acceleration;
+                    referencePlanet = planet;
+                }
+            }
+
+            // Rotate to align with gravity up
+            Vector3 gravityUp = -strongestGravitionalPull.normalized;
+            rb.rotation = Quaternion.FromToRotation (transform.up, gravityUp) * rb.rotation;
+
+            // Move
+            rb.MovePosition (rb.position + smoothVelocity * Time.fixedDeltaTime);
+        }
+        ```
+        </div>
+
+        This method applied the player's movement and gravity. Since the player is in space, their acceleration due to gravity cannot be a constant value. Instead, the player is affected by the gravity of all planets in the scene.
+
+        By virtue of Newton's Second Law:
+        $$
+        F = ma
+        $$
+
+        The player naturally accelerates towards the planet (or sun) with the strongest pull acting on it. This is because the resultant force acting on the player (the sum of all the planets' gravitational forces) is in the direction of said planet.
+        
+        This is usually the planet the player is closest to.
+
+        The player's rotation is also adjusted to align with the gravity vector, so that the player's "down" is always pointing towards the planet.
+
+        ### Planet Simulation
+
+        I have also created a `PlanetSimulation` script that simulates the movement of planets in the scene. This script is attached to an empty GameObject in the scene, and is responsible for updating the positions of the planets every constant time step:
+
+        <div class="codeBlock">
+        ```csharp
+        public class PlanetSimulation : MonoBehaviour {
+            
+            //...
+
+            void FixedUpdate () {
+                for (int i = 0; i < planets.Length; i++) {
+                    planets[i].UpdateVelocity(planets, Universe.physicsTimeStep);
+                }
+
+                for (int i = 0; i < planets.Length; i++) {
+                    planets[i].UpdatePosition(Universe.physicsTimeStep);
+                }
+            }
+
+        }
+        ```
+        </div>
+
+        The only thing the script is responsible for is updating the positions and velocities of the planets in the scene. The `Planet` class is responsible for calculating the gravitational forces acting on itself, and updating its position and velocity accordingly.
+
+        Let's take a look at the `UpdateVelocity` method of the `Planet` class:
+
+        <div class="codeBlock">
+        ```csharp
+        public void UpdateVelocity (Planet[] planets, float timeStep) {
+            Vector3 acceleration = Vector3.zero;
+
+            foreach (Planet planet in planets) {
+                if (planet != this) {
+                    float sqrDst = (planet.position - position).sqrMagnitude;
+                    Vector3 forceDir = (planet.position - position).normalized;
+
+                    Vector3 force = planet.mass * Universe.gravitationalConstant * forceDir / sqrDst;
+                    acceleration += force / mass;
+
+                    velocity += acceleration * timeStep;
+                }
+            }    
+        }
+        ```
+        </div>
+
+        This method calculates the acceleration acting on the planet due to the gravitational forces of all the other planets in the scene. It then updates the planet's velocity based on this acceleration.
+
+        All acceleration values, for players and planets, are calculated using Newton's Law of Universal Gravitation:
+        $$
+        F = G \frac{m_1 m_2}{r^2}
+        $$
+        Where $F$ is the force of gravity, $G$ is the gravitational constant, $m_1$ and $m_2$ are the masses of the two objects, and $r$ is the distance between the two objects.
+
+        And Newton's Second Law:
+        $$
+        F = ma
+        $$
+        Where $F$ is the force acting on the object, $m$ is the mass of the object, and $a$ is the acceleration of the object.
+        
+        In the real world, this force is applied to every object in the universe, but for the purposes of this game, we only apply it to the player, the ship, and the planets.
+
+        As you can see, this line:
+
+        <div class="codeBlock">
+        ```csharp
+        Vector3 force = planet.mass * Universe.gravitationalConstant * forceDir / sqrDst;
+        ```
+        </div>
+
+        This line is the equation for Newton's Law of Universal Gravitation, just rearranged a bit. The acceleration is then calculated using $F = ma$ as usual.
+
+        In the Unity Editor, the planets are given some inital velocity, to make sure they don't crash into each other!
+
+        I wrote a simple implementation of this simulation in [p5.js](https://p5js.org) to test out the maths - safe to say it works!
+        
+        (You might need to scroll around to see the planets, as the simulation needs to be quite large!)
+        <div id="iframe-holder">
+        <iframe src="https://editor.p5js.org/squigglesdev/full/3bD4_aErb"></iframe>
+        </div>
+
+        You can check out the code [here](https://editor.p5js.org/squigglesdev/sketches/3bD4_aErb)! By changing the masses and initial velocities of the planets, you can see how they interact with each other.
+        It also has a simple camera, so you can view the orbits relative to each planet.
+
+        <br />
+
+        ### Networking
+
+        Now that the Unity client is all set up, I need to create the Colyseus server to handle the multiplayer aspect of the game.
+
+        So, I created a new Node.js project and installed the Colyseus library. Then I created a two colyseus room types - one for matchmaking, and one for the game itself.
+
+        Here's the code for the matchmaking room:
+
+        <div class="codeBlock">
+        ```typescript
+        import { Room, Client, matchMaker } from "colyseus";
+        import { MatchmakingState, Player } from "./schema/MatchmakingState";
+
+        export type EloMessage = {
+            elo: number
+        }
+
+        export class MatchmakingRoom extends Room<MatchmakingState> {
+
+            onCreate (options: any) {
+                this.setState(new MatchmakingState());
+            }
+
+            onJoin (client: Client, options: any) {
+                console.log(client.sessionId, "joined!");
+
+                this.state.players.set(client.sessionId, new Player());
+
+                // Send welcome message to the client.
+                client.send("welcomeMessage", {message: "Welcome, matchmaking in progress..."});
+
+                // Listen to elo messages from the client.
+                this.onMessage("eloMessage", (client, elo: EloMessage) => {
+                    const player = this.state.players.get(client.sessionId);
+                    player.elo = elo.elo;
+                    console.log("eloMessage", client.sessionId, elo);
+
+                    // Matchmake if there are enough players, and send them to their similar elo room. 
+                    // (similar is elo +- 250)
+                    if (this.clients.length === 2) {
+                        this.matchMake();
+                    }
+                });
+            }
+
+            async matchMake() {
+                const players = Array.from(this.state.players.values());
+                console.log(players[0].elo, players[1].elo);
+                const eloDifference = Math.abs(players[0].elo - players[1].elo);
+
+                if (eloDifference < 250) {
+                    console.log("Matchmaking successful!", eloDifference);
+                    this.broadcastString({message: "Matchmaking successful!"});
+                    // Create a new room for the players.
+                    let server = await matchMaker.createRoom("game", {players});
+                    this.broadcastServer({message: "game"});
+                } else {
+                    console.log("Matchmaking failed!", eloDifference);
+                    this.broadcastString({message: "Matchmaking failed!"});
+                }
+            }
+
+            broadcastServer(options: any) {
+                this.clients.forEach((client) => {
+                    client.send("broadcastServer", {message: options.message});
+                });
+            }
+        
+            broadcastString(options: any) {
+                this.clients.forEach((client) => {
+                    client.send("broadcastMessage", {message: options.message});
+                });
+            }
+
+            onLeave (client: Client, consented: boolean) {
+                console.log(client.sessionId, "left!");
+            }
+
+            onDispose() {
+                console.log("room", this.roomId, "disposing...");
+            }
+        }
+        ```
+        </div>
+
+        Colyseus rooms are created by extending the `Room` class, and overriding the `onCreate`, `onJoin`, `onMessage`, `onLeave`, and `onDispose` methods.
+        These methods are called by the Colyseus server when certain events occur, such as a client joining the room, or a message being received.
+
+        The `onCreate` method is called when the room is created, and is used to set the initial state of the room. In this case, the state is a `MatchmakingState` object that contains a map of players.
+        <div class="codeBlock">
+        ```typescript
+        onCreate (options: any) {
+            this.setState(new MatchmakingState());
+        }
+        ```
+        </div>
+
+        The `onJoin` method is called when a client joins the room, and is used to add the client to the state and send a welcome message to the client. 
+        <div class="codeBlock">
+        ```typescript
+        onJoin (client: Client, options: any) {
+            console.log(client.sessionId, "joined!");
+
+            this.state.players.set(client.sessionId, new Player());
+
+            // Send welcome message to the client.
+            client.send("welcomeMessage", {message: "Welcome, matchmaking in progress..."});
+        }
+        ```
+        </div>
+
+        The `onMessage` method is called when a message is received from a client, and is used to handle the message. In this case, the message is an `EloMessage` object that contains the player's Elo rating, which is the backbone of the matchmaking system.
+        <div class="codeBlock">
+        ```typescript
+        this.onMessage("eloMessage", (client, elo: EloMessage) => {
+            const player = this.state.players.get(client.sessionId);
+            player.elo = elo.elo;
+            console.log("eloMessage", client.sessionId, elo);
+
+            // Matchmake if there are enough players, and send them to their similar elo room. 
+            // (similar is elo +- 250)
+            if (this.clients.length === 2) {
+                this.matchMake();
+            }
+        });
+        ```
+        </div>
+
+        The `matchMake` method is called when there are enough players in the room to start a game. It calculates the difference in Elo ratings between the players, and if it is less than 250, creates a new room for the players to play in.
+        <div class="codeBlock">
+        ```typescript
+        async matchMake() {
+            const players = Array.from(this.state.players.values());
+            console.log(players[0].elo, players[1].elo);
+            const eloDifference = Math.abs(players[0].elo - players[1].elo);
+
+            if (eloDifference < 250) {
+                console.log("Matchmaking successful!", eloDifference);
+                this.broadcastString({message: "Matchmaking successful!"});
+                // Create a new room for the players.
+                let server = await matchMaker.createRoom("game", {players});
+                this.broadcastServer({message: "game"});
+            } else {
+                console.log("Matchmaking failed!", eloDifference);
+                this.broadcastString({message: "Matchmaking failed!"});
+            }
+        }
+        ```
+        </div>
+
+        The remaining methods are used to broadcast messages to the clients when certain events occur, such as a player leaving the room or the room being disposed.
+
+        Then comes the game room:
+
+        <div class="codeBlock">
+        ```typescript
+        import { Client, Room } from "colyseus";
+        import { GameState } from "./schema/GameState";
+        import { Worker } from "worker_threads";
+
+        export type PositionMessage = {
+            id: string;
+            x: number;
+            y: number;
+            z: number;
+        }
+
+        export type RotationMessage = {
+            id: string;
+            x: number;
+            y: number;
+            z: number;
+            w: number;
+        }
+
+        export type PlayerMessage = {
+            id: string;
+            position: PositionMessage;
+            rotation: RotationMessage;
+        }
+
+        export type BodyMessage = {
+            name: string;
+            position: [number, number, number];
+        }
+
+        export class GameRoom extends Room<GameState> {
+
+            simulationWorker: Worker;
+
+            onCreate(options: any) {
+                console.log("room", this.roomId, "created!");
+                this.setState(new GameState());
+
+                //Create a new simulation web worker
+                this.simulationWorker = new Worker("../Server/src/physics/simulationWorker.js");
+
+                setInterval(() => {
+                    this.simulationWorker.postMessage("getState");
+                }, 250);
+
+                this.simulationWorker.on('message', (event) => {
+                    this.broadcastBodies(event);
+                });
+            }
+            
+
+            onJoin(client: Client, options: any) {
+                console.log(client.sessionId, "joined game room!");
+                this.setHandlers();
+            }
+
+            onLeave(client: Client, consented: boolean) {
+                console.log(client.sessionId, "left!");
+            }
+
+            onDispose() {
+                console.log("room", this.roomId, "disposing...");
+            }
+
+            setHandlers() {
+                this.onMessage("position", (client, message: PositionMessage) => {
+                    this.broadcastPosition(client, message);
+                });
+
+                this.onMessage("rotation", (client, message: RotationMessage) => {
+                    this.broadcastRotation(client, message);
+                });
+
+                this.onMessage("velocity", (client, message: PositionMessage) => {
+                    this.broadcastVelocity(client, message);
+                });
+
+                this.onMessage("player", (client, message: PlayerMessage) => {
+                    let newMessage = message;
+                    newMessage.id = client.sessionId;
+                    this.broadcast("player", message, { except: client });
+                });
+            }
+
+            broadcastPosition(client: any, message: PositionMessage) {
+                let newMessage = message;
+                newMessage.id = client.sessionId;
+                // loop through all clients and send the message
+                this.clients.forEach((c) => {
+                    if (c.sessionId !== client.sessionId) {
+                        c.send("position", newMessage);
+                    }
+                });
+            }
+
+            broadcastRotation(client: any, message: RotationMessage) {
+                let newMessage = message;
+                newMessage.id = client.sessionId;
+                // loop through all clients and send the message
+                this.clients.forEach((c) => {
+                    if (c.sessionId !== client.sessionId) {
+                        c.send("rotation", newMessage);
+                    }
+                });
+            }
+
+            broadcastVelocity(client: any, message: PositionMessage) {
+                let newMessage = message;
+                newMessage.id = client.sessionId;
+                // loop through all clients and send the message
+                this.clients.forEach((c) => {
+                    if (c.sessionId !== client.sessionId) {
+                        c.send("velocity", newMessage);
+                    }
+                });
+            }
+
+            broadcastBodies(message: any) {
+                let sunMessage = {} as BodyMessage;
+                sunMessage.name = "sun";
+                sunMessage.position = message.Sun;
+
+                let bluePlanetMessage = {} as BodyMessage;
+                bluePlanetMessage.name = "Blue Planet";
+                bluePlanetMessage.position = message["Blue Planet"];
+
+                let redPlanetMessage = {} as BodyMessage;
+                redPlanetMessage.name = "Red Planet";
+                redPlanetMessage.position = message["Red Planet"];
+
+                this.clients.forEach((c) => {
+                    c.send("bodies", sunMessage);
+                    c.send("bodies", bluePlanetMessage);
+                    c.send("bodies", redPlanetMessage);
+                });
+            }
+        }
+        ```
+        </div>
+
+        This room is responsible for handling the game itself. It creates a new `GameState` object to store the state of the game, and handles updating and syncronising the positions and rotations of the players.
+
+        As you may notice, it also has one other piece of functionality, which i'll get back to later.
+
+        The `onCreate` method is called when the room is created, and is used to set the initial state of the room. In this case, the state is a `GameState` object that contains the positions and rotations of the players.
+        <div class="codeBlock">
+        ```typescript
+        onCreate(options: any) {
+            console.log("room", this.roomId, "created!");
+            this.setState(new GameState());
+        }
+        ```
+        </div>
+
+        The `onJoin` method is called when a client joins the room, and is used to add the client to the state and set up the message handlers.
+        <div class="codeBlock">
+        ```typescript
+        onJoin(client: Client, options: any) {
+            console.log(client.sessionId, "joined game room!");
+            this.setHandlers();
+        }
+        ```
+        </div>
+
+        The `setHandlers` method is used to set up the message handlers for the room. These handlers are used to handle messages sent by the clients, such as position updates or rotation updates.
+        <div class="codeBlock">
+        ```typescript
+        setHandlers() {
+            this.onMessage("position", (client, message: PositionMessage) => {
+                this.broadcastPosition(client, message);
+            });
+
+            this.onMessage("rotation", (client, message: RotationMessage) => {
+                this.broadcastRotation(client, message);
+            });
+
+            this.onMessage("velocity", (client, message: PositionMessage) => {
+                this.broadcastVelocity(client, message);
+            });
+
+            this.onMessage("player", (client, message: PlayerMessage) => {
+                let newMessage = message;
+                newMessage.id = client.sessionId;
+                this.broadcast("player", message, { except: client });
+            });
+        }
+        ```
+        </div>
+
+        All they do is rebroadcast the incoming message out to all the other clients in the room, using the
+        `broadcastPosition`, `broadcastRotation`, and `broadcastVelocity` methods.
+
+        <br />
+
+        ### Handling Incoming Messages Client-Side
+
+        Now that the server is set up, I need to create the client-side code to handle the incoming messages from the server.
+
+        So I installed the Colyseus Unity Packacge, and created a new script named `NetworkManager` to handle the incoming messages:
+
+        <div class="codeBlock">
+        ```csharp
+        using System.Collections;
+        using System.Collections.Generic;
+        using UnityEngine;
+        using UnityEngine.UI;
+        using TMPro;
+        using Colyseus;
+        using Colyseus.Schema;
+        using UnityEngine.SceneManagement;
+        using System;
+
+        public class NetworkManager : MonoBehaviour
+        {
+            [Header("Player Info")]
+            public int elo = 1000;
+            public List<Player> playersOnline = new();
+            private Dictionary<string, GameObject> playerObjects = new();
+
+            [Header("References")]
+            public Button button;
+            public GameObject playerPrefab;
+            
+            // Colyseus stuff
+            public ColyseusClient client;
+            public ColyseusRoom<State> room;
+
+            bool matchFound = false;
+
+            void Awake() {
+                client = new ColyseusClient("ws://localhost:2567");
+                Debug.Log("Colyseus client created " + client);
+                DontDestroyOnLoad(gameObject);
+            }
+
+            // Update is called once per frame
+            void Update() {
+                if (button != null) {
+                    if (client != null) {
+                        button.interactable = true;
+                    } else {
+                        button.interactable = false;
+                    }
+
+                    if (room != null && !matchFound) {
+                        button.GetComponentInChildren<TextMeshProUGUI>().text = "Matchmaking...";
+                    } else if(matchFound) {
+                        button.GetComponentInChildren<TextMeshProUGUI>().text = "Match found!"; 
+                    } else {
+                        button.GetComponentInChildren<TextMeshProUGUI>().text = "Play";
+                    }  
+                }
+                DrawPlayers();
+
+                #if UNITY_EDITOR
+                if (Input.GetKeyDown(KeyCode.KeypadEnter)) {
+                    Debug.Log(playersOnline.Count);
+                    playersOnline.ForEach(player => Debug.Log(player.id));
+                }
+                #endif
+            }
+
+            public async void OnBeginMatchmaking() {
+                if (room != null) {
+                    await room.Leave();
+                    room = null;
+                } else {
+                    OnJoinRoom();
+                }
+            }
+
+            public async void OnJoinRoom() {
+                room = await client.JoinOrCreate<State>("matchmaker");
+
+                room.OnMessage<StringMessage>("welcomeMessage", (message) => {
+                    Debug.Log("Received message: " + message.message);
+                });
+
+                room.OnMessage<StringMessage>("broadcastMessage", (message) => {
+                    Debug.Log("Received message: " + message.message);
+                });
+
+                room.OnMessage<StringMessage>("broadcastServer", async (message) => {
+                    Debug.Log("Moving to server: " + message.message);
+                    await room.Leave();
+                    room = await client.Join<State>(message.message);
+                    RegisterGameCallbacks(room);
+                    matchFound = true;
+                    button.GetComponentInChildren<TextMeshProUGUI>().text = "Match found!";
+                    //wait 3 seconds, then transition to the game scene
+                    StartCoroutine(MoveScene());
+                });
+
+                Debug.Log("Joined room: " + room.RoomId);
+
+                await room.Send("eloMessage", new { elo });
+            }
+
+            public void RegisterGameCallbacks(ColyseusRoom<State> room) {
+                room.OnMessage<PositionMessage>("position", (message) => {
+                    if (playersOnline.Count == 0) {
+                        playersOnline.Add(new Player { id = message.id });
+                    }
+                    foreach (Player player in playersOnline) {
+                        if (player.id == message.id) {
+                            player.x = message.x;
+                            player.y = message.y;
+                            player.z = message.z;
+                            break;
+                        }
+                        playersOnline.Add(new Player { id = message.id });
+                    }
+                });
+
+                room.OnMessage<RotationMessage>("rotation", (message) => {
+                    if (playersOnline.Count == 0) {
+                        playersOnline.Add(new Player { id = message.id });
+                    }
+                    foreach (Player player in playersOnline) {
+                        if (player.id == message.id) {
+                            player.rotx = message.x;
+                            player.roty = message.y;
+                            player.rotz = message.z;
+                            player.rotw = message.w;
+                            break;
+                        }
+                        playersOnline.Add(new Player { id = message.id });
+                    }
+                });
+
+                room.OnMessage<PositionMessage>("velocity", (message) => {
+                    if (playersOnline.Count == 0) {
+                        playersOnline.Add(new Player { id = message.id });
+                    }
+                    foreach (Player player in playersOnline) {
+                        if (player.id == message.id) {
+                            player.vx = message.x;
+                            player.vy = message.y;
+                            player.vz = message.z;
+                            break;
+                        }
+                        playersOnline.Add(new Player { id = message.id });
+                    }
+                });
+
+                room.OnMessage<BodyMessage>("bodies", (message) => {
+                    NBodySimulation.FromServer(message);
+                });
+            }
+
+            public IEnumerator MoveScene() {
+                yield return new WaitForSeconds(3);
+                SceneManager.LoadScene("Game");
+            }
+
+            public void DrawPlayers() {
+                foreach (Player player in playersOnline) {
+                    GameObject playerObject;
+
+                    // Check if a GameObject already exists for this player
+                    if (playerObjects.ContainsKey(player.id.ToString())) {
+                        playerObject = playerObjects[player.id.ToString()];
+                    } else {
+                        // If not, create a new GameObject and add it to the dictionary
+                        playerObject = Instantiate(playerPrefab, new Vector3(player.x, player.y, player.z),
+                            new Quaternion(player.rotx, player.roty, player.rotz, player.rotw));
+                        playerObjects.Add(player.id.ToString(), playerObject);
+                    }
+
+                    // Update the position and rotation of the player's GameObject
+                    Vector3 targetPosition = new Vector3(player.x, player.y, player.z);
+                    Quaternion targetRotation = new Quaternion(player.rotx, player.roty, player.rotz, player.rotw);
+
+                    // Predict the future position of the player's GameObject
+                    Vector3 velocity = new Vector3(player.vx, player.vy, player.vz);
+                    float predictionTime = 0.05f; 
+                    targetPosition += velocity * predictionTime;
+
+                    // Interpolate between the current position/rotation and the target position/rotation
+                    float interpolationFactor = 0.1f; // Adjust this value to change the speed of interpolation
+                    playerObject.transform.SetPositionAndRotation(Vector3.Lerp(playerObject.transform.position,
+                        targetPosition, interpolationFactor), Quaternion.Lerp(playerObject.transform.rotation,
+                        targetRotation, interpolationFactor)
+                    );
+                }
+            }
+        }
+        ```
+        </div>
+
+        There's a lot to unpack here, so let's break it down:
+
+        The `OnBeginMatchmaking` method is called when the player clicks the "Play" button. It either joins the matchmaking room if the player is not in a room, or leaves the current room if the player is in a room. (stopping matchmaking)
+        <div class="codeBlock">
+        ```csharp
+        public async void OnBeginMatchmaking() {
+            if (room != null) {
+                await room.Leave();
+                room = null;
+            } else {
+                OnJoinRoom();
+            }
+        }
+        ```
+        </div>
+
+        The `OnJoinRoom` method is called when the player joins the matchmaking room. It creates a new room object and sets up the message handlers for the room.
+        <div class="codeBlock">
+        ```csharp
+        public async void OnJoinRoom() {
+            room = await client.JoinOrCreate<State>("matchmaker");
+
+            room.OnMessage<StringMessage>("welcomeMessage", (message) => {
+                Debug.Log("Received message: " + message.message);
+            });
+
+            room.OnMessage<StringMessage>("broadcastMessage", (message) => {
+                Debug.Log("Received message: " + message.message);
+            });
+
+            room.OnMessage<StringMessage>("broadcastServer", async (message) => {
+                Debug.Log("Moving to server: " + message.message);
+                await room.Leave();
+                room = await client.Join<State>(message.message);
+                RegisterGameCallbacks(room);
+                matchFound = true;
+                button.GetComponentInChildren<TextMeshProUGUI>().text = "Match found!";
+                //wait 3 seconds, then transition to the game scene
+                StartCoroutine(MoveScene());
+            });
+
+            Debug.Log("Joined room: " + room.RoomId);
+
+            await room.Send("eloMessage", new { elo });
+        }
+        ```
+        </div>
+        An important handler to note here is the `broadcastServer` handler. This handler is called when the server sends a message to the client to move to the game room. The client then leaves the matchmaking room and joins the game room specified in the message.
+
+        The `RegisterGameCallbacks` method is used to set up the message handlers for the game room. These handlers are used to handle messages sent by the server, such as position updates or rotation updates.
+        <div class="codeBlock">
+        ```csharp
+        public void RegisterGameCallbacks(ColyseusRoom<State> room) {
+            room.OnMessage<PositionMessage>("position", (message) => {
+                if (playersOnline.Count == 0) {
+                    playersOnline.Add(new Player { id = message.id });
+                }
+                foreach (Player player in playersOnline) {
+                    if (player.id == message.id) {
+                        player.x = message.x;
+                        player.y = message.y;
+                        player.z = message.z;
+                        break;
+                    }
+                    playersOnline.Add(new Player { id = message.id });
+                }
+            });
+
+            room.OnMessage<RotationMessage>("rotation", (message) => {
+                if (playersOnline.Count == 0) {
+                    playersOnline.Add(new Player { id = message.id });
+                }
+                foreach (Player player in playersOnline) {
+                    if (player.id == message.id) {
+                        player.rotx = message.x;
+                        player.roty = message.y;
+                        player.rotz = message.z;
+                        player.rotw = message.w;
+                        break;
+                    }
+                    playersOnline.Add(new Player { id = message.id });
+                }
+            });
+
+            room.OnMessage<PositionMessage>("velocity", (message) => {
+                if (playersOnline.Count == 0) {
+                    playersOnline.Add(new Player { id = message.id });
+                }
+                foreach (Player player in playersOnline) {
+                    if (player.id == message.id) {
+                        player.vx = message.x;
+                        player.vy = message.y;
+                        player.vz = message.z;
+                        break;
+                    }
+                    playersOnline.Add(new Player { id = message.id });
+                }
+            });
+
+            room.OnMessage<BodyMessage>("bodies", (message) => {
+                NBodySimulation.FromServer(message);
+            });
+        }
+        ```
+        </div>
+
+        Finally, the `DrawPlayers` method is used to draw the players in the game scene. It loops through the list of players and creates or updates a GameObject for each player.
+        <div class="codeBlock">
+        ```csharp
+        public void DrawPlayers() {
+            foreach (Player player in playersOnline) {
+                GameObject playerObject;
+
+                // Check if a GameObject already exists for this player
+                if (playerObjects.ContainsKey(player.id.ToString())) {
+                    playerObject = playerObjects[player.id.ToString()];
+                } else {
+                    // If not, create a new GameObject and add it to the dictionary
+                    playerObject = Instantiate(playerPrefab, new Vector3(player.x, player.y, player.z),
+                        new Quaternion(player.rotx, player.roty, player.rotz, player.rotw));
+                    playerObjects.Add(player.id.ToString(), playerObject);
+                }
+
+                // Update the position and rotation of the player's GameObject
+                Vector3 targetPosition = new Vector3(player.x, player.y, player.z);
+                Quaternion targetRotation = new Quaternion(player.rotx, player.roty, player.rotz, player.rotw);
+
+                // Predict the future position of the player's GameObject
+                Vector3 velocity = new Vector3(player.vx, player.vy, player.vz);
+                float predictionTime = 0.05f; 
+                targetPosition += velocity * predictionTime;
+
+                // Interpolate between the current position/rotation and the target position/rotation
+                float interpolationFactor = 0.1f; // Adjust this value to change the speed of interpolation
+                playerObject.transform.SetPositionAndRotation(Vector3.Lerp(playerObject.transform.position,
+                    targetPosition, interpolationFactor), Quaternion.Lerp(playerObject.transform.rotation,
+                    targetRotation, interpolationFactor)
+                );
+            }
+        }
+        ```
+        </div>
+        This method is a bit more in-depth than initially expected, as it performs a small amount of prediction to make the player's movement look smoother.
+
+        Prediction is the process of estimating the future position of an object based on its current position and velocity. In this case, the player's GameObject is moved slightly ahead of its actual position based on its velocity, to make the movement look more natural.
+
+        <br />
+
+        ### Issues
+
+        I noticed whilst testing the networking, that something was a little off -- the players kept either sinking into the ground or floating up into space.
+
+        I boiled this down to the tiny discrepancies in the simulation of the planets on each client. This was especially apparent if one of the clients lagged, at which point, the two simulations would end up
+        more than seconds apart (which in the context of space, is a lot!).
+
+        And so came the daunting task of not only simulating the planets on the client, but also on the server. This way, the server could send the objectively correct positions of the planets to all clients, effectively course-correcting any discrepancies.
+
+        As it turns out, this was much more simple than I expected. Remember the simulation I whipped up in p5.js? I could pretty much reuse the code from that for the server-side simulation, as TypeScript (the language I'm using for the server) is built on top of JavaScript (which p5.**js** uses *hint hint*).
+
+        ### Server-Side Simulation
+
+        As I mentioned I'd revisit earlier, the `GameRoom` class had one other piece of functionality -- a `Worker` thread that would simulate the planets in the scene.
+        <div class="codeBlock">
+        ```typescript
+        export class GameRoom extends Room<GameState> {
+
+            simulationWorker: Worker;
+
+            onCreate(options: any) {
+                console.log("room", this.roomId, "created!");
+                this.setState(new GameState());
+
+                //Create a new simulation web worker
+                this.simulationWorker = new Worker("../Server/src/physics/simulationWorker.js");
+
+                setInterval(() => {
+                    this.simulationWorker.postMessage("getState");
+                }, 250);
+
+                this.simulationWorker.on('message', (event) => {
+                    this.broadcastBodies(event);
+                });
+            }
+        }
+        ```
+        </div>
+
+        Workers are a way to run JavaScript (TypeScript in my case) code in a separate thread from the main thread. This allowed me to run some computationally heavy (like simulating a solar system!) processes in the background without disrupting the normal flow of the server.
+
+        The `simulationWorker` is created in the `onCreate` method of the `GameRoom` class, and is used to simulate the planets in the scene. The worker posts a message to the main thread every 250ms with the current state of the simulation, which is then broadcast to all the clients.
+
+        The main `simulationWorker.js` script is as follows:
+        <div class="codeBlock">
+        ```javascript
+        // This file is a worker thread that runs the simulation and sends the state to the server when requested
+        // The worker thread is created in the server file and is used to run the simulation in the background
+
+        import { NBodySimulation } from "./NBodySimulation";
+        import { CelestialBody } from "./CelestialBody";
+        import { parentPort } from "worker_threads";
+        import { vec3 } from "gl-matrix";
+
+        let simulation = new NBodySimulation([
+            new CelestialBody(vec3.fromValues(0, 0, 0), 50, 1500, vec3.fromValues(0, 0, 0), "Sun"),
+            new CelestialBody(vec3.fromValues(-11033, 0, 0), 10, 300, vec3.fromValues(0, 104.35, 0), "Blue Planet"),
+            new CelestialBody(vec3.fromValues(6400, 0, 0), 10, 300, vec3.fromValues(0, 132.4, 0), "Red Planet"),
+        ]);
+
+        simulation.bodies.forEach(body => {
+            body.setSimulation(simulation);
+        });
+
+        parentPort.on("message", (event) => {
+            // Server requested simulation state
+            if (event == "getState") {
+                parentPort.postMessage(simulation.toJSON());
+            }
+        });
+        ```
+        </div>
+
+        The rest of the code, (eg. the `CelestialBody` and `NBodySimulation` classes) are shockingly similar to the p5.js code, so you can check that out [here](https://editor.p5js.org/squigglesdev/sketches/3bD4_aErb).
+        A much better place to see how the code tangibly affects the simulation, much better than any explanation I could give.
+
+        <br />
+
+        Now that the server is periodically course-correcting the client-simulated planets, the players are now able to move around on planets without sinking into the ground or floating into space. Result!
+
+        ## Conclusion
+
+        This small part of the project was a great learning experience for me. I got to learn about the intricacies of networking in Unity, and how to handle multiplayer games with Colyseus. I also got to learn about the challenges of synchronising game state between clients and servers, and how to use workers to run computationally heavy processes in the background.
+        Not to mention, I got to learn a bit about the physics of space, and how to simulate a solar system in code!
+
+        I'm excited to continue working on this project, and I can't wait to see where it goes from here!
+
+        [final result]
+
+        <Comments />
+        Thanks for reading!
     </main>
 </Layout>
