@@ -6,3 +6,9 @@ author: Squiggles
 actions: {'Play': 'https://squiggles.dev/Garden-Project/'}
 previewImage: /blog/gproj/thumb.png
 ---
+
+import Layout from '../../layouts/Layout.astro';
+
+<Layout title={frontmatter.title} socialPreview={frontmatter.previewImage} socialDescription={frontmatter.description} />
+
+<Redirect url="https://squiggles.dev/Garden-Project/" />

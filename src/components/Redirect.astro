@@ -1,0 +1,17 @@
+---
+const { url = ''} = Astro.props;
+---
+
+<redirect-elem data-url={url} />
+
+
+<script>
+    class Redirect extends HTMLElement {
+        constructor() {
+            super();
+            const url = this.dataset.url as string;
+            document.location = url;
+        }
+    }
+    customElements.define('redirect-elem', Redirect);
+</script>

@@ -6,3 +6,10 @@ author: Squiggles
 actions: {'Explore': 'https://editor.p5js.org/squigglesdev/sketches/3bD4_aErb'}
 previewImage: /blog/solsim/thumb.png
 ---
+
+import Layout from '../../layouts/Layout.astro';
+import Redirect from '../../components/Redirect.astro';
+
+<Layout title={frontmatter.title} socialPreview={frontmatter.previewImage} socialDescription={frontmatter.description} />
+
+<Redirect url="https://editor.p5js.org/squigglesdev/sketches/3bD4_aErb" />
