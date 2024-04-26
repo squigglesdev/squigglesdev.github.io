@@ -89,6 +89,11 @@ center > p {
     margin-bottom: 20px;
 }
 
+.showcase {
+    width: 100%;
+    height: auto;
+}
+
 iframe {
     border-radius: 1rem;
     max-width: 100%;
