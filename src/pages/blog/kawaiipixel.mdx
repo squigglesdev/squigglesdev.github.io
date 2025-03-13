@@ -1,0 +1,15 @@
+---
+title: KawaiiPixel
+pubDate: March 14, 2024
+description: A fun drawing game with a dark twist... Made in 2 weeks for the Acerola Jam 0.
+author: Squiggles
+actions: {'Play': 'https://squigglesdev.itch.io/kawaiipixel'}
+previewImage: /blog/kawaiipixel/thumb.png
+---
+
+import Layout from '../../layouts/Layout.astro';
+import Redirect from '../../components/Redirect.astro';
+
+<Layout title={frontmatter.title} socialPreview={frontmatter.previewImage} socialDescription={frontmatter.description} />
+
+<Redirect url="https://squigglesdev.itch.io/kawaiipixel" />
