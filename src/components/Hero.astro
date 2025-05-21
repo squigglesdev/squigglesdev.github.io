@@ -17,12 +17,18 @@ posts.sort((a, b) => new Date(b.frontmatter.pubDate).getTime() - new Date(a.fron
         </Project>
     ))}
     </ul>
+    <img id="signature" src="/signature.png" alt="signature"></img>
 </div>
 <style>
     #hey {
         width: 75%;
         transform: translateX(-1%);
         margin-bottom: 2%;
+    }
+    #signature{
+        width: 25%;
+        align-self: center;
+        margin-bottom: 5%;
     }
     .hero{
         position: absolute;
@@ -56,6 +62,9 @@ posts.sort((a, b) => new Date(b.frontmatter.pubDate).getTime() - new Date(a.fron
         }
         #hey {
             width: 100%;
+        }
+        #signature {
+            width: 50%;
         }
         ul {
             align-items: center;
