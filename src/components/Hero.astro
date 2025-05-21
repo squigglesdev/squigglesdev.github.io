@@ -1,13 +1,34 @@
+---
+import Project from '../components/Project.astro';
+let posts = await Astro.glob('../pages/blog/*.mdx');
+posts.sort((a, b) => new Date(b.frontmatter.pubDate).getTime() - new Date(a.frontmatter.pubDate).getTime());
+---
 <div class="hero">
-    <h1>Hey, I'm Squiggles.</h1>
-    <p>I'm a full-time college student, and an aspiring game dev</p>
+    <img id="hey" src="/Hey.png" alt="header"></img>
+    <p>I'm a full-time student, and an aspiring game dev. </p>
+    <p>This is the space where I showcase the work I've done in the form of a video, blog post, or just a direct link. I hope you enjoy it!</p>
+    <ul>
+    {posts.map((post) => (
+        <Project
+            title={post.frontmatter.title}
+            actions={post.frontmatter.actions}>
+          <img src={post.frontmatter.previewImage} alt={post.frontmatter.title} slot="header"/>
+          {post.frontmatter.description}
+        </Project>
+    ))}
+    </ul>
 </div>
 <style>
+    #hey {
+        width: 75%;
+        transform: translateX(-1%);
+        margin-bottom: 2%;
+    }
     .hero{
         position: absolute;
         display: flex;
         left: 50%;
-        top: 19%;
+        top: 15%;
         flex-direction: column;
         transform: translateX(-50%);
         gap: -5px;
@@ -17,11 +38,27 @@
         position: relative;
         width: 760px;
         height: 88px;
-        
+    }
+    ul {
+        display: flex;
+        flex-direction: column;
+        margin: 0;
+        padding-left: 0;
+        list-style: none;
+        align-items: center;
+        width: 100%;
+        margin-top: 1%;
     }
     @media screen and (max-width: 900px) {
         .hero {
             width: 90%;
+            top: 20%;
+        }
+        #hey {
+            width: 100%;
+        }
+        ul {
+            align-items: center;
         }
     }
     @media screen and (max-width: 636px) {
