@@ -57,16 +57,28 @@ const {title, actions} = Astro.props;
     gap: 12px;
     padding: 5px;
     cursor: pointer;
+    transition: scale 0.2s;
+    user-select: none;
   }
   .card a{
 	text-decoration: none;
 	color: #fff;
   }
-
+  .card:active {
+    scale: 95%;
+  }
+  .card:active a{
+    font-weight: 400;
+	  text-decoration: none;
+	  color: #fff;
+  }
+  .card:active a::after{
+    content: " →";
+  }
   .card:hover a{
     font-weight: 400;
-	text-decoration: none;
-	color: #fff;
+	  text-decoration: none;
+	  color: #fff;
   }
   .card:hover a::after{
     content: " →";
@@ -129,9 +141,12 @@ const {title, actions} = Astro.props;
     h3 {
         font-size: 40px;
     }
+    a {
+      padding-bottom: 5px;
+    }
     p {
-         font-size: 14px;
-         line-height: 1.3;
+      font-size: 14px;
+      line-height: 1.3;
     }
     .info {
       max-width: 100%;

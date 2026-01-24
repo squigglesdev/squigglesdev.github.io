@@ -13,6 +13,7 @@ posts.sort((a, b) => new Date(b.frontmatter.pubDate).getTime() - new Date(a.fron
             title={post.frontmatter.title}
             actions={post.frontmatter.actions}>
           <img src={post.frontmatter.previewImage} alt={post.frontmatter.title} slot="header"/>
+          {post.frontmatter.pubDate} <br><br>
           {post.frontmatter.description}
         </Project>
     ))}
