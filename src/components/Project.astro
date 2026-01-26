@@ -36,9 +36,8 @@ const {title, actions} = Astro.props;
   document.querySelectorAll(".card")?.forEach((card) => {
     card.addEventListener("click", () => {
       const link = card.querySelector("a")
-      console.log(link)
       if (link instanceof HTMLAnchorElement) {
-        document.location = link.href;
+        link.click();
       }
     });
   });
