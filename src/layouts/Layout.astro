@@ -6,6 +6,8 @@ export interface Props {
 }
 
 const { title, socialPreview, socialDescription } = Astro.props;
+
+import { ViewTransitions } from "astro:transitions";
 ---
 
 <!DOCTYPE html>
@@ -39,6 +41,7 @@ const { title, socialPreview, socialDescription } = Astro.props;
 	<body>
 		<slot />
 	</body>
+	<ViewTransitions />
 </html>
 <style is:global>
 	@font-face {
@@ -76,6 +79,7 @@ const { title, socialPreview, socialDescription } = Astro.props;
 		font-size: 17px;
 		line-height: 22px;
 		user-select: none;
+		background-color: #0D1013;
 	}
 	code {
 		font-family: Jetbrains Mono, Menlo, Monaco, Lucida Console, Liberation Mono, DejaVu Sans Mono,
@@ -118,4 +122,5 @@ const { title, socialPreview, socialDescription } = Astro.props;
 			font-size: 20px;
 		}
 	}
+	
 </style>

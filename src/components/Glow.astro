@@ -1,7 +1,6 @@
 <div class="green"></div>
 <div class="purple"></div>
 <div class="blue"></div>
-<div class="cover"></div>
 <style>
     .green{
         position: fixed;
@@ -12,6 +11,8 @@
         border-radius: 100%;
         background: #13333D;
         transform: rotate(-30.05deg);
+        filter: blur(100px);
+        -webkit-filter: blur(100px);
     }
     .purple{
         position: fixed;
@@ -22,6 +23,8 @@
         background: #2A133D;
         border-radius: 100%;
         transform: rotate(-105.71deg);
+        filter: blur(100px);
+        -webkit-filter: blur(100px);
     }
     .blue{
         position: fixed;
@@ -32,14 +35,7 @@
         border-radius: 100%;
         background: #23487E;
         transform: rotate(61.36deg);
-    }
-    .cover{
-        position: fixed;
-        width: 200vw;
-        height: 200vh;
-        left: -50vw;
-        backdrop-filter: blur(150px);
-        -webkit-backdrop-filter: blur(150px);
-        margin: 0;
+        filter: blur(100px);
+        -webkit-filter: blur(100px);
     }
 </style>

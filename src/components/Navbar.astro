@@ -6,6 +6,7 @@
             if (container.style.flexDirection === "column") {
                 container.parentElement.style = null;
                 container.style = null;
+                container.style.height = "0%";
                 for (const child of container.children) {
                     child.style.width = null;
                 }
