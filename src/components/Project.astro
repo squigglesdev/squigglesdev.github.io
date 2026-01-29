@@ -56,12 +56,19 @@ const {title, actions} = Astro.props;
     gap: 12px;
     padding: 5px;
     cursor: pointer;
-    transition: scale 0.2s;
+    transition: scale 0.2s, background-color 0.2s, filter 0.2s, border-color 0.2s;
+    filter: drop-shadow(0px 10px 10px rgba(0, 0, 0, 0.384));
     user-select: none;
   }
   .card a{
-	text-decoration: none;
-	color: #fff;
+	  text-decoration: none;
+	  color: #fff;
+  }
+  .card:hover {
+    scale: 105%;
+    background-color: #161D27;
+    border-color: #fff;
+    filter: drop-shadow(0px 20px 10px rgba(0, 0, 0, 0.527));
   }
   .card:active {
     scale: 95%;
